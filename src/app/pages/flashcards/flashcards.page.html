@@ -25,15 +25,28 @@
     <span>Cargando tus tarjetas...</span>
   </div>
 
-  <p class="cards-error" *ngIf="!loading && loadingError" role="alert">
+  <p class="cards-error" *ngIf="!loading && loadingError && !allLearned" role="alert">
     No se pudieron cargar las tarjetas.
   </p>
 
-  <div class="card-scene" *ngIf="!loading && !loadingError && currentCard as card" (click)="flip()">
+  <app-all-learned *ngIf="!loading && allLearned" (exit)="exitStudy()"></app-all-learned>
+
+  <div class="card-scene" *ngIf="!loading && !loadingError && currentCard as card"
+       [class.dragging]="isDragging"
+       [style.transform]="cardTransform"
+       (pointerdown)="onPointerDown($event)"
+       (pointermove)="onPointerMove($event)"
+       (pointerup)="onPointerUp()"
+       (pointercancel)="onPointerUp()">
+    <div class="swipe-indicator left" [class.active]="swipeDirection === 'left'">
+      <span class="seal-stamp">Difícil</span>
+    </div>
+    <div class="swipe-indicator right" [class.active]="swipeDirection === 'right'">
+      <span class="seal-stamp">Aprendida</span>
+    </div>
     <div class="card-flip" [class.flipped]="isFlipped">
 
       <div class="card-face card-front">
-        <span class="card-type">Palabra</span>
         <div class="image-stage" [class.ready]="imageLoaded">
           <span class="image-loading" *ngIf="!imageLoaded">Cargando imagen...</span>
           <img [src]="card.imageUrl" [alt]="card.word" (load)="onImageLoaded()" />
@@ -47,6 +60,8 @@
         <span class="back-divider" aria-hidden="true"></span>
         <span class="translation">{{ card.translation }}</span>
         <ion-button fill="clear" class="speak-button" (click)="speak(card.word); $event.stopPropagation()"
+          (pointerdown)="$event.stopPropagation()"
+          (pointerup)="$event.stopPropagation()"
           aria-label="Escuchar pronunciación">
           <ion-icon name="volume-high-outline" slot="icon-only"></ion-icon>
         </ion-button>
@@ -58,7 +73,7 @@
 
   <div class="hint" *ngIf="!loading && !loadingError">
     <span class="hint-line"></span>
-    <span>Toca para descubrir la traducción</span>
+    <span>Toca para traducir · Desliza para cambiar</span>
     <span class="hint-line"></span>
   </div>
 

@@ -7,6 +7,7 @@ export interface Flashcard {
   word: string;
   translation: string;
   imageUrl: string;
+  learned?: boolean;
 }
 
 interface StoredStudySet {
@@ -87,11 +88,12 @@ export class FlashcardService {
   }
 
   async generateFlashcards(topic: string, count: number): Promise<Flashcard[]> {
-    const storedStudySet = await this.readStudySet(this.getStudySetId(topic, count));
-    const storedCards = storedStudySet?.cards;
-    if (storedCards?.length === count) {
+    const storedStudySet = await this.readStudySet(this.getStudySetId(topic));
+    const storedCards = storedStudySet?.cards ?? [];
+
+    if (storedCards.length >= count) {
       if (storedStudySet?.imageSearchVersion === 3) {
-        return storedCards;
+        return storedCards.slice(0, count);
       }
 
       const migratedCards = await Promise.all(
@@ -101,8 +103,11 @@ export class FlashcardService {
         }))
       );
       await this.saveStudySet(topic, migratedCards);
-      return migratedCards;
+      return migratedCards.slice(0, count);
     }
+
+    const missing = count - storedCards.length;
+    const existingWords = new Set(storedCards.map(card => card.word.toLowerCase()));
 
     const params = new HttpParams().set('key', atob(environment.geminiApiKey));
     const response = await firstValueFrom(this.http.post<GeminiResponse>(
@@ -110,7 +115,7 @@ export class FlashcardService {
       {
         contents: [{
           parts: [{
-            text: `Dame exactamente ${count} palabras de vocabulario en ingles sobre el tema "${topic}". Responde unicamente con un JSON valido, sin markdown, usando este formato: [{"word":"English word","translation":"traduccion en espanol"}]`
+            text: `Dame exactamente ${missing} palabras de vocabulario en ingles sobre el tema "${topic}"${existingWords.size ? `. No incluyas estas palabras que ya tengo: ${[...existingWords].join(', ')}` : ''}. Responde unicamente con un JSON valido, sin markdown, usando este formato: [{"word":"English word","translation":"traduccion en espanol"}]`
           }]
         }]
       },
@@ -118,26 +123,46 @@ export class FlashcardService {
     ));
 
     const text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    const cards = this.parseFlashcards(text, count);
+    const newCards = this.parseFlashcards(text, missing);
 
-    if (cards.length !== count) {
+    if (newCards.length < missing) {
       throw new Error('Gemini no devolvio la cantidad solicitada de palabras');
     }
 
-    const cardsWithImages = await Promise.all(
-      cards.map(async card => ({
+    const newCardsWithImages = await Promise.all(
+      newCards.map(async card => ({
         ...card,
         imageUrl: await this.getKlipyImageUrl(card.word, card.translation)
       }))
     );
 
-    await this.saveStudySet(topic, cardsWithImages);
-    return cardsWithImages;
+    const allCards = [...storedCards, ...newCardsWithImages];
+    await this.saveStudySet(topic, allCards);
+    return allCards.slice(0, count);
   }
 
   async getStoredFlashcards(topic: string, count: number): Promise<Flashcard[] | null> {
-    const record = await this.readStudySet(this.getStudySetId(topic, count));
+    const record = await this.readStudySet(this.getStudySetId(topic));
     return record?.cards ?? null;
+  }
+
+  async markAsLearned(topic: string, count: number, word: string): Promise<void> {
+    const id = this.getStudySetId(topic);
+    const record = await this.readStudySet(id);
+    if (!record) return;
+
+    record.cards = record.cards.map(card =>
+      card.word === word ? { ...card, learned: true } : card
+    );
+
+    const database = await this.openDatabase();
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction(this.storeName, 'readwrite');
+      transaction.objectStore(this.storeName).put(record);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    database.close();
   }
 
   async deleteTopic(topic: string): Promise<void> {
@@ -212,7 +237,7 @@ export class FlashcardService {
     await new Promise<void>((resolve, reject) => {
       const transaction = database.transaction(this.storeName, 'readwrite');
       transaction.objectStore(this.storeName).put({
-        id: this.getStudySetId(topic, cards.length),
+        id: this.getStudySetId(topic),
         topic,
         cards,
         createdAt: new Date().toISOString(),
@@ -265,8 +290,8 @@ export class FlashcardService {
     });
   }
 
-  private getStudySetId(topic: string, count: number): string {
-    return `${topic}:${count}`;
+  private getStudySetId(topic: string): string {
+    return topic;
   }
 
   private findImageUrl(value: unknown): string | undefined {

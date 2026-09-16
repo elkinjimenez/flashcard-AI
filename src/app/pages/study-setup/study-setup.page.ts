@@ -204,6 +204,15 @@ export class StudySetupPage implements OnInit {
       if (this.selectedTopic === topic.id) {
         this.selectedTopic = null;
       }
+      if (this.topics.length === 0) {
+        this.loadingTopics = true;
+        this.topicsError = false;
+        try {
+          await this.loadMoreTopics();
+        } finally {
+          this.loadingTopics = false;
+        }
+      }
     } catch (error) {
       console.error('No se pudo eliminar el tema', error);
     }
