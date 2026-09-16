@@ -1,0 +1,72 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button fill="clear" class="exit-button" (click)="exitStudy()" aria-label="Salir de la práctica">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>
+      <span class="session-heading">
+        <span class="progress-label">{{ topic }}</span>
+        <span class="progress-divider" aria-hidden="true"></span>
+        <span class="progress-count">{{ currentIndex + 1 }} de {{ cards.length }}</span>
+      </span>
+    </ion-title>
+  </ion-toolbar>
+  <div class="progress-area" aria-label="Progreso de la sesión">
+    <ion-progress-bar [value]="progress"></ion-progress-bar>
+  </div>
+</ion-header>
+
+<ion-content class="ion-padding">
+
+  <div class="cards-loading" *ngIf="loading" aria-live="polite">
+    <ion-spinner name="crescent"></ion-spinner>
+    <span>Cargando tus tarjetas...</span>
+  </div>
+
+  <p class="cards-error" *ngIf="!loading && loadingError" role="alert">
+    No se pudieron cargar las tarjetas.
+  </p>
+
+  <div class="card-scene" *ngIf="!loading && !loadingError && currentCard as card" (click)="flip()">
+    <div class="card-flip" [class.flipped]="isFlipped">
+
+      <div class="card-face card-front">
+        <span class="card-type">Palabra</span>
+        <div class="image-stage" [class.ready]="imageLoaded">
+          <span class="image-loading" *ngIf="!imageLoaded">Cargando imagen...</span>
+          <img [src]="card.imageUrl" [alt]="card.word" (load)="onImageLoaded()" />
+        </div>
+        <div class="word-label">{{ card.word }}</div>
+      </div>
+
+      <div class="card-face card-back">
+        <span class="back-type">Traducción</span>
+        <span class="word-en">{{ card.word }}</span>
+        <span class="back-divider" aria-hidden="true"></span>
+        <span class="translation">{{ card.translation }}</span>
+        <ion-button fill="clear" class="speak-button" (click)="speak(card.word); $event.stopPropagation()"
+          aria-label="Escuchar pronunciación">
+          <ion-icon name="volume-high-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+        <span class="speak-label">Escuchar pronunciación</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="hint" *ngIf="!loading && !loadingError">
+    <span class="hint-line"></span>
+    <span>Toca para descubrir la traducción</span>
+    <span class="hint-line"></span>
+  </div>
+
+  <div class="bottom-section" *ngIf="!loading && !loadingError">
+    <ion-button expand="block" size="large" class="next-btn" (click)="next()">
+      {{ currentIndex < cards.length - 1 ? 'Siguiente' : 'Terminar' }}
+      <ion-icon slot="end" name="arrow-forward-outline"></ion-icon>
+    </ion-button>
+  </div>
+
+</ion-content>

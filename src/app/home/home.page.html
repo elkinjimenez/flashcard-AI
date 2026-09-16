@@ -1,0 +1,22 @@
+<ion-content [fullscreen]="true" class="home-content">
+  <main class="home-shell">
+    <div class="brand-mark" aria-hidden="true">
+      <ion-icon name="sparkles-outline"></ion-icon>
+    </div>
+
+    <p class="eyebrow">Flashcards AI</p>
+    <h1>Aprende palabras.<br><em>Habla con confianza.</em></h1>
+    <p class="intro">Practica vocabulario de inglés con tarjetas creadas para ti.</p>
+
+    <div class="preview-card" aria-hidden="true">
+      <span class="preview-label">WORD OF THE DAY</span>
+      <strong>curious</strong>
+      <span>curioso · curiosa</span>
+    </div>
+
+    <ion-button expand="block" size="large" class="practice-button" [routerLink]="['/study-setup']">
+      Comenzar a practicar
+      <ion-icon slot="end" name="arrow-forward-outline"></ion-icon>
+    </ion-button>
+  </main>
+</ion-content>

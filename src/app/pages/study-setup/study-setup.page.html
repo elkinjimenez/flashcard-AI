@@ -1,0 +1,75 @@
+<ion-content class="ion-padding">
+
+  <div class="setup-heading">
+    <p class="setup-eyebrow">Tu próxima sesión</p>
+    <h1 class="page-title">¿Qué quieres <br> aprender hoy?</h1>
+    <p class="setup-intro">Elige un tema y crea una sesión a tu medida.</p>
+  </div>
+
+  <ion-action-sheet [isOpen]="topicMenuOpen" header="Tema guardado" [buttons]="[
+      { text: 'Eliminar', role: 'destructive', handler: deleteSelectedTopic.bind(this) },
+      { text: 'Cancelar', role: 'cancel', handler: closeTopicMenu.bind(this) }
+    ]" (didDismiss)="closeTopicMenu()"></ion-action-sheet>
+
+  <h2 class="section-title">Elige un tema</h2>
+
+  <div class="topics-loading" *ngIf="loadingTopics" aria-live="polite">
+    <ion-spinner name="crescent"></ion-spinner>
+    <span>Generando temas...</span>
+  </div>
+
+  <p class="topics-error" *ngIf="!loadingTopics && topicsError" role="alert">
+    No se pudieron cargar los temas. Intenta recargar la pantalla.
+  </p>
+
+  <div class="topics-grid" *ngIf="!loadingTopics && !topicsError">
+    <div *ngFor="let topic of topics" class="topic-card" [class.selected]="selectedTopic === topic.id"
+      [class.saved]="topic.fromLocal"
+      (pointerdown)="startTopicPress(topic)" (pointerup)="cancelTopicPress()" (pointercancel)="cancelTopicPress()"
+      (pointerleave)="cancelTopicPress()" (click)="selectTopic(topic.id)">
+      <ion-icon [name]="selectedTopic === topic.id ? 'checkmark-circle' : topic.icon"></ion-icon>
+      <span>{{ topic.label }}</span>
+      <ion-icon class="topic-origin" [name]="topic.fromLocal ? 'bookmark-outline' : 'sparkles-outline'"
+        [attr.aria-label]="topic.fromLocal ? 'Tema guardado localmente' : 'Tema nuevo de la IA'"
+        [attr.title]="topic.fromLocal ? 'Guardado localmente' : 'Nuevo de la IA'"></ion-icon>
+    </div>
+  </div>
+
+  <ion-button *ngIf="!loadingTopics && !topicsError" expand="block" fill="outline" class="more-topics-btn"
+    [disabled]="loadingMoreTopics" (click)="loadMoreTopics()">
+    <ion-spinner *ngIf="loadingMoreTopics" name="crescent"></ion-spinner>
+    <ion-icon *ngIf="!loadingMoreTopics" slot="end" name="sparkles-outline"></ion-icon>
+    {{ loadingMoreTopics ? ' Buscando temas...' : 'Más temas' }}
+  </ion-button>
+  <p class="topics-more-error" *ngIf="moreTopicsError" role="alert">
+    No se pudieron cargar más temas. Intenta nuevamente.
+  </p>
+
+  <div class="bottom-section">
+    <h2 class="section-title">¿Cuántas tarjetas?</h2>
+
+    <ion-segment class="card-count-segment" [(ngModel)]="cardCount" mode="ios"
+      [disabled]="loadingTopics || topicsError">
+      <ion-segment-button [value]="10">
+        <ion-label>10</ion-label>
+      </ion-segment-button>
+      <ion-segment-button [value]="15">
+        <ion-label>15</ion-label>
+      </ion-segment-button>
+      <ion-segment-button [value]="20">
+        <ion-label>20</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
+    <ion-button expand="block" size="large" class="start-btn"
+      [disabled]="loadingTopics || topicsError || loadingCards || !selectedTopic" (click)="startStudy()">
+      <ion-spinner *ngIf="loadingCards" name="crescent"></ion-spinner>
+      {{ loadingCards ? 'Generando tarjetas...' : 'Practicar' }}
+      <ion-icon *ngIf="selectedTopic && !loadingCards" slot="end" name="arrow-forward-outline"></ion-icon>
+    </ion-button>
+    <p class="cards-error" *ngIf="cardsError" role="alert">
+      No se pudieron generar las tarjetas. Intenta nuevamente.
+    </p>
+  </div>
+
+</ion-content>
