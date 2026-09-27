@@ -1,10 +1,11 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Flashcard } from './flashcard.model';
 import { GeminiService } from './gemini';
 import { CardImageService } from './card-images';
 import { StudySetRepository } from './study-set-repository';
 import { toTopicKey } from './topic-key';
 import { EnglishLevel } from './english-level';
+import { toDayKey } from './day-key';
 
 export type { Flashcard } from './flashcard.model';
 
@@ -21,16 +22,23 @@ export interface TopicProgress {
   total: number;
 }
 
+// Una respuesta guardada, con lo necesario para deshacerla (ver undoAnswer).
+export interface AnswerRecord {
+  // La tarjeta tal como estaba antes de responder.
+  previous: Flashcard;
+  knew: boolean;
+  // Día en que se contó en la actividad: si se deshace pasada la medianoche, se descuenta de ese.
+  day: string;
+}
+
 // Días hasta el próximo repaso al subir a cada caja (1..5). Acertar en la última caja marca la palabra como aprendida.
 const reviewIntervalDays = [1, 3, 7, 14, 30];
 
 @Injectable({ providedIn: 'root' })
 export class FlashcardService {
-  constructor(
-    private gemini: GeminiService,
-    private images: CardImageService,
-    private studySets: StudySetRepository
-  ) {}
+  private gemini = inject(GeminiService);
+  private images = inject(CardImageService);
+  private studySets = inject(StudySetRepository);
 
   async getTopics(): Promise<TopicResult> {
     const storedTopics = await this.readTopics();
@@ -130,24 +138,29 @@ export class FlashcardService {
     return (await this.studySets.get(topic))?.cards ?? [];
   }
 
-  // Devuelve la tarjeta tal como estaba antes de responder, para poder deshacer con restoreCard.
-  async recordAnswer(topic: string, word: string, knew: boolean): Promise<Flashcard | undefined> {
+  // Guarda la respuesta en la tarjeta y la cuenta en la actividad del día. undefined si la tarjeta ya no existe.
+  async recordAnswer(topic: string, word: string, knew: boolean): Promise<AnswerRecord | undefined> {
     let previous: Flashcard | undefined;
     await this.studySets.updateCards(topic, cards => cards.map(card => {
       if (card.word !== word) return card;
       previous = card;
       return this.applyAnswer(card, knew);
     }));
-    return previous;
+    if (!previous) return undefined;
+
+    const day = toDayKey(new Date());
+    await this.countActivity(day, knew, 1);
+    return { previous, knew, day };
   }
 
   // Solo el progreso: lo demás (p. ej. una imagen cambiada después de responder) se queda como está.
-  async restoreCard(topic: string, previous: Flashcard): Promise<void> {
+  async undoAnswer(topic: string, { previous, knew, day }: AnswerRecord): Promise<void> {
     await this.studySets.updateCards(topic, cards => cards.map(card =>
       card.word === previous.word
-        ? { ...card, learned: previous.learned, box: previous.box, nextReview: previous.nextReview }
+        ? { ...card, learned: previous.learned, box: previous.box, nextReview: previous.nextReview, misses: previous.misses }
         : card
     ));
+    await this.countActivity(day, knew, -1);
   }
 
   // Imagen elegida a mano cuando la de la IA no muestra bien la palabra. No toca el progreso.
@@ -182,7 +195,7 @@ export class FlashcardService {
   private applyAnswer(card: Flashcard, knew: boolean): Flashcard {
     const now = new Date();
     if (!knew) {
-      return { ...card, box: 0, nextReview: now.toISOString() };
+      return { ...card, box: 0, nextReview: now.toISOString(), misses: (card.misses ?? 0) + 1 };
     }
 
     // Acertar una tarjeta que aún no tocaba (p. ej. al repasar las difíciles) no adelanta su calendario.
@@ -209,6 +222,15 @@ export class FlashcardService {
       .filter(card => card.nextReview)
       .sort((a, b) => (a.nextReview ?? '').localeCompare(b.nextReview ?? ''));
     return [...reviews, ...dueCards.filter(card => !card.nextReview)];
+  }
+
+  // La actividad es solo para las estadísticas: si no se guarda, la respuesta sí vale.
+  private async countActivity(day: string, knew: boolean, sign: 1 | -1) {
+    try {
+      await this.studySets.addActivity(day, sign, knew ? sign : 0);
+    } catch (error) {
+      console.warn('No se pudo guardar la actividad del día', error);
+    }
   }
 
   private async readTopics(): Promise<string[]> {

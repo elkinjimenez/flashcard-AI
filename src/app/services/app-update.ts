@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { SwUpdate } from '@angular/service-worker';
 import { addIcons } from 'ionicons';
 import { refresh } from 'ionicons/icons';
@@ -7,10 +7,13 @@ import { ToastService } from './toast';
 // Detecta las versiones nuevas desplegadas y las aplica cuando el usuario lo pide.
 @Injectable({ providedIn: 'root' })
 export class AppUpdateService {
+  private swUpdate = inject(SwUpdate);
+  private toast = inject(ToastService);
+
   private versionReady = false;
   private checking = false;
 
-  constructor(private swUpdate: SwUpdate, private toast: ToastService) {
+  constructor() {
     addIcons({ refresh });
   }
 

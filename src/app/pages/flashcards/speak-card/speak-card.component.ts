@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonButton, IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -33,6 +33,8 @@ const defaultMessage = 'Toca el micrófono y di la palabra en inglés.';
   styleUrls: ['./speak-card.component.scss'],
 })
 export class SpeakCardComponent implements OnChanges, OnDestroy {
+  private speech = inject(SpeechRecognitionService);
+
   @Input({ required: true }) card!: Flashcard;
   // Cambia en cada aparición de una tarjeta: reinicia el ejercicio.
   @Input({ required: true }) round!: number;
@@ -54,7 +56,7 @@ export class SpeakCardComponent implements OnChanges, OnDestroy {
   private attempts = 0;
   private readonly maxAttempts = 2;
 
-  constructor(private speech: SpeechRecognitionService) {
+  constructor() {
     addIcons({ bulbOutline, imageOutline, mic, volumeHighOutline });
   }
 

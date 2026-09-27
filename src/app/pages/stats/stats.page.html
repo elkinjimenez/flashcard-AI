@@ -1,0 +1,125 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/study-setup" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Tu progreso</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+
+  <div class="stats-loading" *ngIf="loading" aria-live="polite">
+    <ion-spinner name="crescent"></ion-spinner>
+    <span>Calculando tu progreso...</span>
+  </div>
+
+  <p class="stats-error" *ngIf="!loading && loadingError" role="alert">No se pudieron calcular las estadísticas.</p>
+
+  <div class="stats-empty" *ngIf="stats && !stats.totalWords">
+    <ion-icon name="stats-chart-outline" aria-hidden="true"></ion-icon>
+    <p>Aún no hay nada que medir. Elige un tema y practica: aquí verás tu racha y cómo avanzan tus palabras.</p>
+    <ion-button [routerLink]="['/study-setup']">Elegir un tema</ion-button>
+  </div>
+
+  <ng-container *ngIf="stats as s">
+    <ng-container *ngIf="s.totalWords">
+
+      <section class="kpis" aria-label="Resumen">
+        <div class="kpi">
+          <span class="kpi-label">Racha</span>
+          <span class="kpi-value">{{ count(s.streak, 'día', 'días') }}</span>
+          <span class="kpi-note">Récord: {{ count(s.bestStreak, 'día', 'días') }}</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">Aciertos esta semana</span>
+          <span class="kpi-value">{{ weekAccuracy }}</span>
+          <span class="kpi-note">{{ count(weekAnswers, 'respuesta', 'respuestas') }}</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">Para repasar hoy</span>
+          <span class="kpi-value">{{ s.dueToday }}</span>
+          <span class="kpi-note">{{ s.dueTomorrow }} mañana</span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">Aprendidas</span>
+          <span class="kpi-value">{{ s.stages.learned }}</span>
+          <span class="kpi-note">de {{ count(s.totalWords, 'palabra', 'palabras') }}</span>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title" id="week-title">Esta semana</h2>
+        <p class="panel-note">Respuestas por día. Toca un día para ver su detalle.</p>
+        <!-- Cada columna entera es el botón: más fácil de tocar que la barra sola. -->
+        <div class="week-chart" role="group" aria-labelledby="week-title">
+          <button type="button" class="week-day" *ngFor="let day of s.week; let i = index"
+            [class.selected]="i === selectedDay" [attr.aria-pressed]="i === selectedDay"
+            [attr.aria-label]="dayDescription(day, i)" (click)="selectedDay = i" (mouseenter)="selectedDay = i">
+            <span class="week-plot">
+              <span class="week-value" *ngIf="i === selectedDay && day.answers">{{ day.answers }}</span>
+              <span class="week-bar" *ngIf="day.answers" [style.height.%]="barHeight(day)"></span>
+            </span>
+            <span class="week-label">{{ dayLabel(day, i) }}</span>
+          </button>
+        </div>
+        <p class="week-detail" aria-live="polite">{{ dayDescription(s.week[selectedDay], selectedDay) }}</p>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">Tus palabras</h2>
+        <p class="panel-note">Cada repaso acertado la acerca a «aprendida»; fallarla la devuelve a «aprendiendo».</p>
+        <div class="stage-bar" role="img" [attr.aria-label]="stagesDescription">
+          <ng-container *ngFor="let stage of stages">
+            <span class="stage-segment" *ngIf="s.stages[stage.id]" [attr.data-stage]="stage.id"
+              [style.flex-grow]="s.stages[stage.id]"></span>
+          </ng-container>
+        </div>
+        <ul class="legend">
+          <li *ngFor="let stage of stages">
+            <span class="swatch" [attr.data-stage]="stage.id" aria-hidden="true"></span>
+            <span class="legend-label">{{ stage.label }}</span>
+            <span class="legend-value">{{ s.stages[stage.id] }}</span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">Por tema</h2>
+        <ul class="topic-list">
+          <li *ngFor="let topic of s.topics">
+            <div class="topic-row">
+              <span class="topic-name">{{ topic.topic }}</span>
+              <span class="topic-count">{{ topic.known }}/{{ topic.total }}</span>
+            </div>
+            <div class="meter" role="progressbar" aria-valuemin="0" [attr.aria-valuemax]="topic.total"
+              [attr.aria-valuenow]="topic.known" [attr.aria-label]="'Sabes ' + topic.known + ' de ' + topic.total + ' palabras de ' + topic.topic">
+              <span class="meter-fill" [style.width.%]="topicPercent(topic)"></span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <section class="panel">
+        <h2 class="panel-title">Las que más te cuestan</h2>
+        <p class="panel-note" *ngIf="!s.hardestWords.length">Cuando falles una palabra, aparecerá aquí para que la tengas presente.</p>
+        <ul class="hard-list" *ngIf="s.hardestWords.length">
+          <li *ngFor="let item of s.hardestWords">
+            <!-- crossorigin: así el service worker la guarda para verla sin conexión (ver ngsw-config.json). -->
+            <img *ngIf="item.imageUrl; else noImage" [src]="item.imageUrl" alt="" crossorigin="anonymous" loading="lazy" />
+            <ng-template #noImage>
+              <span class="hard-no-image"><ion-icon name="image-outline" aria-hidden="true"></ion-icon></span>
+            </ng-template>
+            <span class="hard-text">
+              <strong>{{ item.word }}</strong>
+              <span>{{ item.translation }} · {{ item.topic }}</span>
+            </span>
+            <span class="hard-misses">{{ count(item.misses, 'fallo', 'fallos') }}</span>
+          </li>
+        </ul>
+      </section>
+
+    </ng-container>
+  </ng-container>
+
+</ion-content>

@@ -12,6 +12,8 @@ export interface Flashcard {
   learned?: boolean;
   // Caja de Leitner: 0 = nueva o fallada, 1..5 = repaso.
   box?: number;
+  // Veces que se ha fallado, para las estadísticas (se cuenta desde que existe el campo).
+  misses?: number;
   // Fecha (ISO) desde la que la tarjeta vuelve a tocar.
   nextReview?: string;
 }

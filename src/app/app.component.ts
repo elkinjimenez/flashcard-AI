@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
 import { AppUpdateService } from './services/app-update';
 
@@ -8,7 +8,7 @@ import { AppUpdateService } from './services/app-update';
   imports: [IonApp, IonRouterOutlet],
 })
 export class AppComponent {
-  constructor(appUpdate: AppUpdateService) {
-    appUpdate.init();
+  constructor() {
+    inject(AppUpdateService).init();
   }
 }

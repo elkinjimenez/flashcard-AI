@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { AppUpdateService } from './app-update';
 import { Flashcard } from './flashcard.model';
 import { toTopicKey } from './topic-key';
@@ -9,7 +9,8 @@ import { toTopicKey } from './topic-key';
 const currentImageSearchVersion = 4;
 
 // 4: el id de cada tema pasa a ser su clave normalizada (antes era el texto tal cual).
-const databaseVersion = 4;
+// 5: se añade la actividad diaria, para las estadísticas.
+const databaseVersion = 5;
 
 export interface StoredStudySet {
   id: string;
@@ -19,13 +20,22 @@ export interface StoredStudySet {
   imageSearchVersion?: number;
 }
 
+// Respuestas dadas en un día (fecha local AAAA-MM-DD, ver toDayKey).
+export interface DailyActivity {
+  date: string;
+  answers: number;
+  correct: number;
+}
+
+// Toda la base de datos local: los temas con sus tarjetas y la actividad diaria.
 @Injectable({ providedIn: 'root' })
 export class StudySetRepository {
+  private appUpdate = inject(AppUpdateService);
+
   private readonly databaseName = 'flashcards-ai';
   private readonly storeName = 'study-sets';
+  private readonly activityStoreName = 'activity';
   private switchingVersion = false;
-
-  constructor(private appUpdate: AppUpdateService) {}
 
   async get(topic: string): Promise<StoredStudySet | undefined> {
     const database = await this.openDatabase();
@@ -109,6 +119,48 @@ export class StudySetRepository {
     database.close();
   }
 
+  async getActivity(): Promise<DailyActivity[]> {
+    const database = await this.openDatabase();
+    const activity = await new Promise<DailyActivity[]>((resolve, reject) => {
+      const transaction = database.transaction(this.activityStoreName, 'readonly');
+      const request = transaction.objectStore(this.activityStoreName).getAll();
+      request.onsuccess = () => resolve(request.result as DailyActivity[]);
+      request.onerror = () => reject(request.error);
+    });
+    database.close();
+    return activity;
+  }
+
+  // Suma respuestas a un día; en negativo, las descuenta (al deshacer).
+  async addActivity(date: string, answers: number, correct: number): Promise<void> {
+    const database = await this.openDatabase();
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction(this.activityStoreName, 'readwrite');
+      const store = transaction.objectStore(this.activityStoreName);
+      const request = store.get(date);
+
+      request.onsuccess = () => {
+        const day = (request.result as DailyActivity | undefined) ?? { date, answers: 0, correct: 0 };
+        // Igual que en updateCards: sin el catch, un fallo aquí terminaría la transacción "bien" sin guardar.
+        try {
+          store.put({
+            date,
+            answers: Math.max(0, day.answers + answers),
+            correct: Math.max(0, day.correct + correct)
+          } satisfies DailyActivity);
+        } catch (error) {
+          reject(error);
+          transaction.abort();
+        }
+      };
+      request.onerror = () => reject(request.error);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+    });
+    database.close();
+  }
+
   private openDatabase(): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.databaseName, databaseVersion);
@@ -118,6 +170,9 @@ export class StudySetRepository {
           database.createObjectStore(this.storeName, { keyPath: 'id' });
         } else if (event.oldVersion < 4 && request.transaction) {
           this.migrateToTopicKeys(request.transaction);
+        }
+        if (!database.objectStoreNames.contains(this.activityStoreName)) {
+          database.createObjectStore(this.activityStoreName, { keyPath: 'date' });
         }
       };
       request.onsuccess = () => {

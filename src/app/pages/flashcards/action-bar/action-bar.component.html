@@ -1,0 +1,46 @@
+<div class="action-panel" [attr.data-result]="result === null ? null : result ? 'correct' : 'wrong'">
+  <!-- Siempre presente (aunque vacío) para que el lector de pantalla anuncie el resultado. -->
+  <p class="feedback" aria-live="polite">
+    <ng-container *ngIf="result !== null">
+      <ion-icon [name]="result ? 'checkmark-circle' : 'refresh-circle'" aria-hidden="true"></ion-icon>
+      {{ result ? '¡Correcto!' : 'La repasarás al final de la sesión' }}
+    </ng-container>
+  </p>
+
+  <div class="actions">
+    <ion-button size="large" fill="outline" class="undo-btn" [disabled]="!canUndo" (click)="undo.emit()"
+      aria-label="Volver a la tarjeta anterior" title="Volver a la tarjeta anterior">
+      <ion-icon slot="icon-only" name="arrow-undo-outline"></ion-icon>
+    </ion-button>
+
+    <ng-container [ngSwitch]="mode">
+      <ion-button *ngSwitchCase="'flip'" expand="block" size="large" class="main-btn" (click)="flip.emit()">
+        <ion-icon slot="start" name="eye-outline" aria-hidden="true"></ion-icon>
+        Ver palabra
+      </ion-button>
+
+      <ng-container *ngSwitchCase="'rate'">
+        <ion-button expand="block" size="large" fill="outline" class="rate-btn hard" (click)="rate.emit(false)">
+          <ion-icon slot="start" name="close" aria-hidden="true"></ion-icon>
+          Difícil
+        </ion-button>
+        <ion-button expand="block" size="large" class="rate-btn knew" (click)="rate.emit(true)">
+          <ion-icon slot="start" name="checkmark" aria-hidden="true"></ion-icon>
+          La sé
+        </ion-button>
+      </ng-container>
+
+      <ion-button *ngSwitchCase="'give-up'" expand="block" size="large" fill="outline" class="give-up-btn"
+        (click)="giveUp.emit()">
+        No lo sé
+      </ion-button>
+
+      <!-- Con acierto se llena mientras espera a avanzar solo. -->
+      <ion-button *ngSwitchCase="'continue'" expand="block" size="large" class="main-btn continue-btn"
+        [class.auto]="autoAdvanceMs" [style.--auto-advance]="autoAdvanceMs + 'ms'" (click)="advance.emit()">
+        Continuar
+        <ion-icon slot="end" name="arrow-forward-outline" aria-hidden="true"></ion-icon>
+      </ion-button>
+    </ng-container>
+  </div>
+</div>

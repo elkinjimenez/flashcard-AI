@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -23,6 +23,9 @@ import { ImageCandidate, KlipyService } from 'src/app/services/klipy';
   styleUrls: ['./image-picker.component.scss'],
 })
 export class ImagePickerComponent implements OnInit {
+  private klipy = inject(KlipyService);
+  private modalController = inject(ModalController);
+
   @Input({ required: true }) card!: Flashcard;
 
   query = '';
@@ -32,7 +35,7 @@ export class ImagePickerComponent implements OnInit {
   private searchedTerm = '';
   private searchId = 0;
 
-  constructor(private klipy: KlipyService, private modalController: ModalController) {
+  constructor() {
     addIcons({ checkmarkCircle });
   }
 

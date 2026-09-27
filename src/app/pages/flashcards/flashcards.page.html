@@ -129,54 +129,8 @@
     <span class="hint-line"></span>
   </div>
 
-  <!-- Solo lo que toca hacer ahora; tras responder un ejercicio se tiñe con el resultado. -->
-  <div class="action-bar" *ngIf="!loading && !loadingError && !summary">
-    <div class="action-panel" [attr.data-result]="exerciseAnswered ? (exerciseResult ? 'correct' : 'wrong') : null">
-      <!-- Siempre presente (aunque vacío) para que el lector de pantalla anuncie el resultado. -->
-      <p class="feedback" aria-live="polite">
-        <ng-container *ngIf="exerciseAnswered">
-          <ion-icon [name]="exerciseResult ? 'checkmark-circle' : 'refresh-circle'" aria-hidden="true"></ion-icon>
-          {{ exerciseResult ? '¡Correcto!' : 'La repasarás al final de la sesión' }}
-        </ng-container>
-      </p>
-
-      <div class="actions">
-        <ion-button size="large" fill="outline" class="undo-btn" [disabled]="!canUndo" (click)="undo()"
-          aria-label="Volver a la tarjeta anterior" title="Volver a la tarjeta anterior">
-          <ion-icon slot="icon-only" name="arrow-undo-outline"></ion-icon>
-        </ion-button>
-
-        <ng-container [ngSwitch]="actionMode">
-          <ion-button *ngSwitchCase="'flip'" expand="block" size="large" class="main-btn" (click)="flip()">
-            <ion-icon slot="start" name="eye-outline" aria-hidden="true"></ion-icon>
-            Ver palabra
-          </ion-button>
-
-          <ng-container *ngSwitchCase="'rate'">
-            <ion-button expand="block" size="large" fill="outline" class="rate-btn hard" (click)="answer(false)">
-              <ion-icon slot="start" name="close" aria-hidden="true"></ion-icon>
-              Difícil
-            </ion-button>
-            <ion-button expand="block" size="large" class="rate-btn knew" (click)="answer(true)">
-              <ion-icon slot="start" name="checkmark" aria-hidden="true"></ion-icon>
-              La sé
-            </ion-button>
-          </ng-container>
-
-          <ion-button *ngSwitchCase="'give-up'" expand="block" size="large" fill="outline" class="give-up-btn"
-            (click)="giveUp()">
-            No lo sé
-          </ion-button>
-
-          <!-- Con acierto se llena mientras espera a avanzar solo. -->
-          <ion-button *ngSwitchCase="'continue'" expand="block" size="large" class="main-btn continue-btn"
-            [class.auto]="autoAdvanceMs" [style.--auto-advance]="autoAdvanceMs + 'ms'" (click)="advance()">
-            Continuar
-            <ion-icon slot="end" name="arrow-forward-outline" aria-hidden="true"></ion-icon>
-          </ion-button>
-        </ng-container>
-      </div>
-    </div>
-  </div>
+  <app-action-bar *ngIf="!loading && !loadingError && !summary" [mode]="actionMode" [result]="exerciseResult"
+    [canUndo]="canUndo" [autoAdvanceMs]="autoAdvanceMs" (flip)="flip()" (rate)="answer($event)" (giveUp)="giveUp()"
+    (advance)="advance()" (undo)="undo()"></app-action-bar>
 
 </ion-content>

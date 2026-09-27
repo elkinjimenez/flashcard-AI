@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { ToastController } from '@ionic/angular/standalone';
 
 export interface ToastOptions {
@@ -11,9 +11,9 @@ export interface ToastOptions {
 
 @Injectable({ providedIn: 'root' })
 export class ToastService {
-  private current?: HTMLIonToastElement;
+  private toastController = inject(ToastController);
 
-  constructor(private toastController: ToastController) {}
+  private current?: HTMLIonToastElement;
 
   // Resuelve al cerrarse: true si se tocó el botón. Un toast nuevo cierra el anterior.
   async show(message: string, { color = 'dark', button, icon, duration = 3000 }: ToastOptions = {}): Promise<boolean> {

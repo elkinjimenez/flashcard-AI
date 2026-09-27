@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom, timeout } from 'rxjs';
 import { environment } from 'src/environments/environment';
@@ -62,10 +62,10 @@ const examplesResponseSchema = {
 
 @Injectable({ providedIn: 'root' })
 export class GeminiService {
+  private http = inject(HttpClient);
+
   // Generar 20 palabras con su JSON tarda unos segundos: pasado esto la conexión se da por colgada.
   private readonly requestTimeoutMs = 30000;
-
-  constructor(private http: HttpClient) {}
 
   async suggestTopics(excludedTopics: string[]): Promise<string[]> {
     const excludedText = excludedTopics.length

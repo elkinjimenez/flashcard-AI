@@ -18,4 +18,8 @@ export const routes: Routes = [
     path: 'flashcards',
     loadComponent: () => import('./pages/flashcards/flashcards.page').then( m => m.FlashcardsPage)
   },
+  {
+    path: 'stats',
+    loadComponent: () => import('./pages/stats/stats.page').then(m => m.StatsPage)
+  },
 ];

@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { addIcons } from 'ionicons';
 import {
   IonContent,
@@ -40,7 +40,8 @@ import {
   leafOutline,
   carOutline,
   peopleOutline,
-  refresh
+  refresh,
+  statsChartOutline
 } from 'ionicons/icons';
 import { Flashcard, FlashcardService, TopicProgress, TopicResult } from 'src/app/services/flashcard';
 import { toTopicKey } from 'src/app/services/topic-key';
@@ -72,12 +73,19 @@ interface Topic {
     IonIcon,
     IonSpinner,
     IonActionSheet,
-    FormsModule
+    FormsModule,
+    RouterLink
   ],
   templateUrl: './study-setup.page.html',
   styleUrls: ['./study-setup.page.scss'],
 })
 export class StudySetupPage implements OnInit {
+  private router = inject(Router);
+  private flashcardService = inject(FlashcardService);
+  private alertController = inject(AlertController);
+  private appUpdate = inject(AppUpdateService);
+  private toast = inject(ToastService);
+
   topics: Topic[] = [];
   loadingTopics = true;
   // Qué puede hacer el usuario (ver describeRequestError); null si no hubo error. Los demás errores van en un toast.
@@ -96,13 +104,7 @@ export class StudySetupPage implements OnInit {
   // Se recuerda entre visitas.
   level: EnglishLevel = loadEnglishLevel();
 
-  constructor(
-    private router: Router,
-    private flashcardService: FlashcardService,
-    private alertController: AlertController,
-    private appUpdate: AppUpdateService,
-    private toast: ToastService
-  ) {
+  constructor() {
     addIcons({
       bookOutline, checkmarkCircle, bookmarkOutline, sparklesOutline,
       arrowForwardOutline,
@@ -110,7 +112,7 @@ export class StudySetupPage implements OnInit {
       medkitOutline, barbellOutline, musicalNotesOutline, laptopOutline,
       homeOutline, shirtOutline, cloudOutline, cashOutline, colorPaletteOutline,
       flaskOutline, languageOutline, cartOutline, schoolOutline, leafOutline,
-      carOutline, peopleOutline, refresh
+      carOutline, peopleOutline, refresh, statsChartOutline
     });
   }
 

@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { Flashcard } from './flashcard.model';
 import { GeminiService } from './gemini';
 import { KlipyService } from './klipy';
@@ -7,10 +7,8 @@ import { KlipyService } from './klipy';
 // de forma más literal (el primero de Klipy suele ser un meme de algún famoso o serie).
 @Injectable({ providedIn: 'root' })
 export class CardImageService {
-  constructor(
-    private klipy: KlipyService,
-    private gemini: GeminiService
-  ) {}
+  private klipy = inject(KlipyService);
+  private gemini = inject(GeminiService);
 
   // Si Gemini falla o no le convence ninguno, se usa el primero de Klipy.
   // Sin candidatos, se apunta cuándo se buscó para no repetir la búsqueda enseguida (ver retryMissingImages).

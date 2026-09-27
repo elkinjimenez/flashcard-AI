@@ -1,0 +1,338 @@
+// Colores de los gráficos: escala de azules validada (una tinta, de clara a oscura). Los textos nunca llevan el
+// color de los datos.
+:host {
+  --text-primary: #20242b;
+  --text-secondary: #69717d;
+  --gridline: #e7ebf2;
+  --bar: #3987e5;
+  --bar-selected: #1c5cab;
+  --meter-track: #cde2fb;
+  --meter-fill: #2a78d6;
+  --stage-new: #86b6ef;
+  --stage-learning: #3987e5;
+  --stage-consolidating: #1c5cab;
+  --stage-learned: #0d366b;
+}
+
+ion-content {
+  --background: #f4f5f7;
+}
+
+ion-toolbar {
+  --background: #ffffff;
+  --color: #303640;
+}
+
+.stats-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 50vh;
+  color: var(--ion-color-medium);
+}
+
+.stats-error {
+  margin-top: 30vh;
+  color: var(--ion-color-danger);
+  text-align: center;
+}
+
+.stats-empty {
+  margin-top: 18vh;
+  padding: 0 16px;
+  color: var(--text-secondary);
+  text-align: center;
+
+  ion-icon {
+    color: var(--meter-fill);
+    font-size: 3rem;
+  }
+
+  ion-button {
+    --border-radius: 16px;
+  }
+}
+
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.kpi,
+.panel {
+  border: 1px solid rgba(35, 42, 52, 0.06);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(35, 42, 52, 0.04);
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+}
+
+.kpi-label,
+.kpi-note,
+.panel-note {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.kpi-label {
+  font-weight: 700;
+}
+
+.kpi-value {
+  color: var(--text-primary);
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.panel {
+  margin-top: 16px;
+  padding: 16px;
+}
+
+.panel-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.panel-note {
+  margin: 4px 0 14px;
+}
+
+// Semana: columnas de 24 px como mucho que crecen desde una única línea base.
+.week-chart {
+  display: flex;
+}
+
+.week-day {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--ion-color-primary);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  &.selected {
+    color: var(--text-primary);
+    font-weight: 800;
+
+    .week-bar {
+      background: var(--bar-selected);
+    }
+  }
+}
+
+.week-plot {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  align-self: stretch;
+  height: 128px;
+  border-bottom: 1px solid var(--gridline);
+}
+
+.week-value {
+  margin-bottom: 4px;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.week-bar {
+  width: min(24px, 60%);
+  min-height: 4px;
+  border-radius: 4px 4px 0 0;
+  background: var(--bar);
+}
+
+.week-label {
+  margin-top: 6px;
+  font-size: 0.75rem;
+}
+
+.week-detail {
+  min-height: 1.4em;
+  margin: 12px 0 0;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+// Tus palabras: un hueco de 2 px separa las etapas; sin borde alrededor.
+.stage-bar {
+  display: flex;
+  gap: 2px;
+  height: 16px;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.stage-segment {
+  flex-basis: 0;
+  min-width: 4px;
+}
+
+[data-stage='new'] {
+  background: var(--stage-new);
+}
+
+[data-stage='learning'] {
+  background: var(--stage-learning);
+}
+
+[data-stage='consolidating'] {
+  background: var(--stage-consolidating);
+}
+
+[data-stage='learned'] {
+  background: var(--stage-learned);
+}
+
+.legend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+  }
+}
+
+.swatch {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.legend-label {
+  color: var(--text-secondary);
+}
+
+.legend-value {
+  margin-left: auto;
+  color: var(--text-primary);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.topic-list,
+.hard-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.topic-list li + li {
+  margin-top: 14px;
+}
+
+.topic-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.topic-name {
+  color: var(--text-primary);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.topic-count {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+// Medidor: el fondo es un paso más claro del mismo azul, así se lee todo el recorrido.
+.meter {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--meter-track);
+}
+
+.meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--meter-fill);
+}
+
+.hard-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  & + li {
+    margin-top: 12px;
+  }
+
+  img,
+  .hard-no-image {
+    flex-shrink: 0;
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    background: #e7ebf2;
+    object-fit: cover;
+  }
+}
+
+.hard-no-image {
+  display: grid;
+  place-items: center;
+  color: #8a929e;
+  font-size: 1.4rem;
+}
+
+.hard-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+
+  strong {
+    color: var(--text-primary);
+    font-size: 1rem;
+  }
+}
+
+.hard-misses {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+}

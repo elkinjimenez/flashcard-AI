@@ -1,4 +1,4 @@
-import { Component, ViewChild } from '@angular/core';
+import { Component, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
@@ -7,23 +7,20 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
-  volumeHighOutline, arrowForwardOutline, arrowBackOutline, closeOutline, sparklesOutline, imageOutline,
-  eyeOutline, eyeOffOutline, arrowUndoOutline, checkmark, close, checkmarkCircle, refreshCircle, imagesOutline
+  volumeHighOutline, arrowBackOutline, imageOutline, imagesOutline, eyeOutline, eyeOffOutline
 } from 'ionicons/icons';
-import { Flashcard, FlashcardService } from 'src/app/services/flashcard';
+import { AnswerRecord, Flashcard, FlashcardService } from 'src/app/services/flashcard';
 import { SessionSummary, SessionSummaryComponent } from './session-summary/session-summary.component';
 import { QuizCardComponent, QuizKind } from './quiz-card/quiz-card.component';
 import { SpeakCardComponent, SpeechUnavailableReason } from './speak-card/speak-card.component';
 import { ImagePickerComponent } from './image-picker/image-picker.component';
+import { ActionBarComponent, ActionMode } from './action-bar/action-bar.component';
 import { SpeechRecognitionService } from 'src/app/services/speech-recognition';
 import { wordPattern } from 'src/app/services/word-forms';
 import { ToastService } from 'src/app/services/toast';
 
 // speak: ver la imagen y decir la palabra en voz alta.
 type ExerciseKind = 'card' | QuizKind | 'speak';
-
-// Lo que ofrece la barra de abajo: voltear la tarjeta, calificarla, rendirse en un ejercicio o continuar tras responderlo.
-type ActionMode = 'flip' | 'rate' | 'give-up' | 'continue';
 
 function shuffle<T>(items: T[]): T[] {
   const result = [...items];
@@ -40,8 +37,8 @@ interface SessionStep {
   card: Flashcard;
   knew: boolean;
   previousResult?: 'knew' | 'hard';
-  // Cómo estaba guardada la tarjeta antes de responder; undefined si no se pudo guardar.
-  savedCard?: Promise<Flashcard | undefined>;
+  // La respuesta guardada; undefined si no se pudo guardar.
+  saved?: Promise<AnswerRecord | undefined>;
 }
 
 @Component({
@@ -59,12 +56,19 @@ interface SessionStep {
     IonSpinner,
     SessionSummaryComponent,
     QuizCardComponent,
-    SpeakCardComponent
+    SpeakCardComponent,
+    ActionBarComponent
   ],
   templateUrl: './flashcards.page.html',
   styleUrls: ['./flashcards.page.scss'],
 })
 export class FlashcardsPage {
+  private router = inject(Router);
+  private flashcardService = inject(FlashcardService);
+  private toast = inject(ToastService);
+  private speech = inject(SpeechRecognitionService);
+  private modalController = inject(ModalController);
+
   cards: Flashcard[] = [];
   currentIndex = 0;
   isFlipped = false;
@@ -100,7 +104,7 @@ export class FlashcardsPage {
   private quizTimer?: ReturnType<typeof setTimeout>;
   // Resultado de cada palabra en la sesión; 'hard' si se marcó difícil al menos una vez.
   private sessionResults = new Map<string, 'knew' | 'hard'>();
-  private history: SessionStep[] = [];
+  private steps: SessionStep[] = [];
   // Las escrituras van en fila: deshacer debe restaurar después de que se guardó la respuesta y antes de la siguiente.
   private saveQueue: Promise<unknown> = Promise.resolve();
   topic = '';
@@ -116,17 +120,8 @@ export class FlashcardsPage {
   private autoSpeakTimer?: ReturnType<typeof setTimeout>;
   @ViewChild(SpeakCardComponent) private speakCard?: SpeakCardComponent;
 
-  constructor(
-    private router: Router,
-    private flashcardService: FlashcardService,
-    private toast: ToastService,
-    private speech: SpeechRecognitionService,
-    private modalController: ModalController
-  ) {
-    addIcons({
-      volumeHighOutline, arrowForwardOutline, arrowBackOutline, closeOutline, sparklesOutline, imageOutline,
-      eyeOutline, eyeOffOutline, arrowUndoOutline, checkmark, close, checkmarkCircle, refreshCircle, imagesOutline
-    });
+  constructor() {
+    addIcons({ volumeHighOutline, arrowBackOutline, imageOutline, imagesOutline, eyeOutline, eyeOffOutline });
   }
 
   // Única carga de la sesión: Ionic llama a este hook cada vez que se entra en la página, también la primera.
@@ -154,7 +149,7 @@ export class FlashcardsPage {
     this.summary = null;
     this.cardMotion = null;
     this.sessionResults.clear();
-    this.history = [];
+    this.steps = [];
 
     try {
       this.cards = shuffle(sessionCards);
@@ -212,7 +207,7 @@ export class FlashcardsPage {
   }
 
   get canUndo(): boolean {
-    return this.history.length > 0;
+    return this.steps.length > 0;
   }
 
   get quizKind(): QuizKind | null {
@@ -425,12 +420,12 @@ export class FlashcardsPage {
 
   // Guarda la respuesta y la apunta en la sesión y en el historial para poder deshacerla.
   private registerAnswer(card: Flashcard, knew: boolean) {
-    this.history.push({
+    this.steps.push({
       index: this.currentIndex,
       card,
       knew,
       previousResult: this.sessionResults.get(card.word),
-      savedCard: this.saveAnswer(card, knew)
+      saved: this.saveAnswer(card, knew)
     });
     if (knew) {
       if (!this.sessionResults.has(card.word)) {
@@ -459,9 +454,9 @@ export class FlashcardsPage {
 
   // Vuelve a la tarjeta anterior y deshace su respuesta (La sé o Difícil).
   undo() {
-    const step = this.history[this.history.length - 1];
+    const step = this.steps[this.steps.length - 1];
     if (!step || this.answering) return;
-    this.history.pop();
+    this.steps.pop();
     this.clearQuizTimer();
 
     // Desde el resumen no hay tarjeta que retirar.
@@ -500,11 +495,11 @@ export class FlashcardsPage {
     if (!step.knew) {
       this.cards.pop();
     }
-    this.restoreSavedCard(step.savedCard);
+    this.undoSavedAnswer(step.saved);
   }
 
   // No se espera desde el swipe para no frenar la animación; los errores se avisan aquí.
-  private saveAnswer(card: Flashcard, knew: boolean): Promise<Flashcard | undefined> {
+  private saveAnswer(card: Flashcard, knew: boolean): Promise<AnswerRecord | undefined> {
     const topic = this.topic;
     return this.enqueueSave(async () => {
       try {
@@ -517,18 +512,18 @@ export class FlashcardsPage {
     });
   }
 
-  private restoreSavedCard(savedCard?: Promise<Flashcard | undefined>) {
-    if (!savedCard) return;
+  private undoSavedAnswer(saved?: Promise<AnswerRecord | undefined>) {
+    if (!saved) return;
 
     const topic = this.topic;
     this.enqueueSave(async () => {
-      const previous = await savedCard;
-      if (!previous) return;
+      const record = await saved;
+      if (!record) return;
       try {
-        await this.flashcardService.restoreCard(topic, previous);
+        await this.flashcardService.undoAnswer(topic, record);
       } catch (error) {
         console.error('No se pudo deshacer la respuesta', error);
-        this.showError(`No se pudo deshacer tu respuesta para "${previous.word}".`);
+        this.showError(`No se pudo deshacer tu respuesta para "${record.previous.word}".`);
       }
     });
   }
@@ -690,7 +685,7 @@ export class FlashcardsPage {
         .map(card => [card.word, card])
     );
 
-    this.cards = [...hardCards.values()].sort(() => Math.random() - 0.5);
+    this.cards = shuffle([...hardCards.values()]);
     this.currentIndex = 0;
     this.showFront();
     this.prepareExercise();
@@ -698,7 +693,7 @@ export class FlashcardsPage {
     this.imageFailed = false;
     this.sessionResults.clear();
     // La ronda de difíciles empieza de cero: no se puede volver a la sesión anterior.
-    this.history = [];
+    this.steps = [];
     this.summary = null;
   }
 
