@@ -1,4 +1,5 @@
 import { Injectable, inject } from '@angular/core';
+import { Subject } from 'rxjs';
 import { Flashcard, learnedBox, reviewIntervalDays } from './flashcard.model';
 import { GeminiService } from './gemini';
 import { CardImageService } from './card-images';
@@ -41,6 +42,10 @@ export class FlashcardService {
   private gemini = inject(GeminiService);
   private images = inject(CardImageService);
   private studySets = inject(StudySetRepository);
+
+  // Emite al salir de una sesión de práctica, con sus respuestas ya guardadas: las pestañas refrescan su progreso.
+  // Ionic no les manda ionViewWillEnter al volver de la práctica, solo a la página de pestañas que las contiene.
+  readonly sessionEnded = new Subject<void>();
 
   async getTopics(): Promise<TopicResult> {
     const storedTopics = await this.readTopics();

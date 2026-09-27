@@ -14,7 +14,7 @@
       <span>{{ wordOfTheDay.translation }}</span>
     </div>
 
-    <ion-button expand="block" size="large" class="practice-button" [routerLink]="['/study-setup']">
+    <ion-button expand="block" size="large" class="practice-button" (click)="start()">
       Comenzar a practicar
       <ion-icon slot="end" name="arrow-forward-outline"></ion-icon>
     </ion-button>

@@ -17,7 +17,7 @@
   <ion-button *ngIf="summary.hard" expand="block" size="large" class="review-btn" (click)="reviewHard.emit()">
     Repasar difíciles ({{ summary.hard }})
   </ion-button>
-  <ion-button expand="block" fill="clear" class="exit-btn" (click)="exit.emit()">Elegir otro tema</ion-button>
+  <ion-button expand="block" fill="clear" class="exit-btn" (click)="exit.emit()">Terminar</ion-button>
   <ion-button fill="clear" size="small" class="undo-btn" (click)="undo.emit()">
     <ion-icon slot="start" name="arrow-undo-outline" aria-hidden="true"></ion-icon>
     Volver a la última tarjeta

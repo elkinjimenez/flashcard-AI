@@ -18,28 +18,23 @@ ion-content {
   --background: #f4f5f7;
 }
 
-ion-toolbar {
-  --background: #ffffff;
-  --color: #303640;
-}
-
 .stats-loading {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  min-height: 50vh;
+  min-height: 40vh;
   color: var(--ion-color-medium);
 }
 
 .stats-error {
-  margin-top: 30vh;
+  margin-top: 12vh;
   color: var(--ion-color-danger);
   text-align: center;
 }
 
 .stats-empty {
-  margin-top: 18vh;
+  margin-top: 8vh;
   padding: 0 16px;
   color: var(--text-secondary);
   text-align: center;
@@ -58,6 +53,7 @@ ion-toolbar {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+  margin-top: 20px;
 }
 
 .kpi,

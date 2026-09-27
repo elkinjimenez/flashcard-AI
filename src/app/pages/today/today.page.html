@@ -1,0 +1,58 @@
+<ion-content class="ion-padding">
+
+  <header class="page-heading">
+    <p class="page-eyebrow">{{ dateLabel }}</p>
+    <h1 class="page-title">{{ title }}</h1>
+    <p class="page-intro" *ngIf="intro">{{ intro }}</p>
+    <span class="streak" *ngIf="stats?.totalWords" [class.active]="streak">
+      <ion-icon name="flame" aria-hidden="true"></ion-icon>
+      {{ streakLabel }}
+    </span>
+  </header>
+
+  <div class="today-loading" *ngIf="loading" aria-live="polite">
+    <ion-spinner name="crescent"></ion-spinner>
+    <span>Buscando tus repasos...</span>
+  </div>
+
+  <p class="today-error" *ngIf="!loading && loadingError" role="alert">No se pudieron cargar tus repasos.</p>
+
+  <section *ngIf="dueTopics.length" aria-labelledby="due-title">
+    <h2 class="section-title" id="due-title">Para repasar hoy</h2>
+    <ul class="due-list">
+      <li *ngFor="let topic of dueTopics">
+        <span class="due-icon"><ion-icon [name]="icon(topic)" aria-hidden="true"></ion-icon></span>
+        <span class="due-text">
+          <strong>{{ topic.topic }}</strong>
+          <span>{{ count(topic.due, 'repaso', 'repasos') }}</span>
+        </span>
+        <ion-button class="review-btn" [disabled]="!!reviewing" [attr.aria-label]="'Repasar ' + topic.topic"
+          (click)="review(topic)">
+          <ion-spinner *ngIf="reviewing === topic.topic" name="crescent"></ion-spinner>
+          <ng-container *ngIf="reviewing !== topic.topic">Repasar</ng-container>
+        </ion-button>
+      </li>
+    </ul>
+  </section>
+
+  <!-- Sin repasos: a por palabras nuevas. -->
+  <ion-button *ngIf="stats && !dueTopics.length" expand="block" class="topics-btn" [routerLink]="['/tabs/topics']">
+    {{ stats.totalWords ? 'Aprender palabras nuevas' : 'Elegir un tema' }}
+    <ion-icon slot="end" name="arrow-forward-outline" aria-hidden="true"></ion-icon>
+  </ion-button>
+
+  <section aria-labelledby="word-title">
+    <h2 class="section-title" id="word-title">Palabra del día</h2>
+    <div class="word-card">
+      <div class="word-row">
+        <strong lang="en">{{ wordOfTheDay.word }}</strong>
+        <ion-button fill="clear" class="speak-button" aria-label="Escuchar pronunciación" title="Escuchar pronunciación"
+          (click)="speakWordOfTheDay()">
+          <ion-icon slot="icon-only" name="volume-high-outline"></ion-icon>
+        </ion-button>
+      </div>
+      <span>{{ wordOfTheDay.translation }}</span>
+    </div>
+  </section>
+
+</ion-content>

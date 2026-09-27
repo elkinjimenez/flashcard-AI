@@ -29,3 +29,57 @@
 ion-alert .alert-button-danger {
   color: var(--ion-color-danger);
 }
+
+/* Barra de pestañas flotante (ver tabs.page.scss): medidas que comparte con el contenido que pasa por detrás. */
+:root {
+  --glass-rgb: 255, 255, 255;
+  --tab-bar-height: 56px;
+  /* Por encima del indicador de inicio de iOS; max() evita valores negativos sin área segura. */
+  --tab-bar-bottom: max(8px, calc(var(--ion-safe-area-bottom, 0px) - 14px));
+  /* Lo que tapa la barra desde el borde inferior. */
+  --tab-bar-space: calc(var(--tab-bar-height) + var(--tab-bar-bottom));
+}
+
+/* El contenido de las pestañas hace scroll por detrás de la barra: al final queda hueco para que nada se quede tapado.
+   Con .ion-padding para ganarle a su --padding-bottom. */
+ion-tabs ion-content,
+ion-tabs ion-content.ion-padding {
+  --padding-bottom: calc(var(--tab-bar-space) + 32px);
+}
+
+/* Deslizar de lado cambia de pestaña (y arrastra tarjetas): que el navegador no lo tome por "atrás / adelante". */
+html,
+body {
+  overscroll-behavior-x: none;
+}
+
+/* Cabecera de las pestañas (Hoy, Temas, Progreso): va con el contenido y se desplaza con él, sin barra fija. Sin
+   ion-header, deja ella el hueco de la barra de estado. */
+.page-heading {
+  padding: calc(28px + var(--ion-safe-area-top, 0px)) 4px 8px;
+}
+
+.page-eyebrow {
+  margin: 0 0 10px;
+  color: var(--ion-color-primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.page-title {
+  margin: 0;
+  color: #20242b;
+  font-size: clamp(2rem, 8vw, 2.8rem);
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.06;
+}
+
+.page-intro {
+  margin: 14px 0 0;
+  color: #69717d;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}

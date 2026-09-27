@@ -1,8 +1,9 @@
 import { Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import {
-  IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonContent, IonSpinner, IonIcon, IonButton
+  IonContent, IonSpinner, IonIcon, IonButton
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { bulbOutline, imageOutline, statsChartOutline } from 'ionicons/icons';
@@ -31,7 +32,7 @@ const todayIndex = 6;
   standalone: true,
   imports: [
     CommonModule, RouterLink,
-    IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonContent, IonSpinner, IonIcon, IonButton
+    IonContent, IonSpinner, IonIcon, IonButton
   ],
   templateUrl: './stats.page.html',
   styleUrls: ['./stats.page.scss'],
@@ -54,6 +55,7 @@ export class StatsPage {
 
   constructor() {
     addIcons({ bulbOutline, imageOutline, statsChartOutline });
+    this.flashcardService.sessionEnded.pipe(takeUntilDestroyed()).subscribe(() => this.load());
   }
 
   // Normalmente se crea al fallarla en la práctica; las que ya costaban antes de existir el truco lo piden aquí.
@@ -78,8 +80,12 @@ export class StatsPage {
     }
   }
 
-  // En cada visita: al volver de practicar, los números cambian.
-  async ionViewWillEnter() {
+  // En cada visita y al terminar una sesión de práctica: los números cambian.
+  ionViewWillEnter() {
+    return this.load();
+  }
+
+  private async load() {
     this.loadingError = false;
     try {
       this.stats = await this.statsService.getStats();

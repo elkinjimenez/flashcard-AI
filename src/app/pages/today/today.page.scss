@@ -1,0 +1,167 @@
+// Mismo lenguaje que Temas (cabecera) y Progreso (paneles blancos sobre gris claro).
+ion-content {
+  --background: #f4f5f7;
+}
+
+// Gris sin racha; naranja con racha.
+.streak {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #e7ebf2;
+  color: #5d6571;
+  font-size: 0.82rem;
+  font-weight: 800;
+
+  ion-icon {
+    font-size: 1rem;
+  }
+
+  &.active {
+    background: #fff0e3;
+    color: #a4480a;
+
+    ion-icon {
+      color: #f07c1a;
+    }
+  }
+}
+
+.today-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 160px;
+  color: var(--ion-color-medium);
+}
+
+.today-error {
+  margin-top: 40px;
+  color: var(--ion-color-danger);
+  text-align: center;
+}
+
+.section-title {
+  margin: 28px 0 12px;
+  color: #303640;
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.due-list {
+  margin: 0;
+  padding: 4px 0;
+  border: 1px solid rgba(35, 42, 52, 0.06);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(35, 42, 52, 0.04);
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px 10px 14px;
+
+    & + li {
+      border-top: 1px solid #eef1f6;
+    }
+  }
+}
+
+.due-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(var(--ion-color-primary-rgb), 0.1);
+  color: var(--ion-color-primary);
+  font-size: 1.3rem;
+}
+
+.due-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  color: #69717d;
+  font-size: 0.8rem;
+
+  strong {
+    overflow: hidden;
+    color: #20242b;
+    font-size: 1rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.review-btn {
+  flex-shrink: 0;
+  min-width: 96px;
+  margin: 0;
+  --border-radius: 12px;
+  --box-shadow: none;
+  font-weight: 800;
+
+  ion-spinner {
+    width: 18px;
+    height: 18px;
+  }
+}
+
+.topics-btn {
+  margin: 28px 0 0;
+  --border-radius: 16px;
+  --box-shadow: 0 12px 26px rgba(var(--ion-color-primary-rgb), 0.24);
+  font-weight: 800;
+}
+
+.word-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px;
+  border: 1px solid rgba(35, 42, 52, 0.06);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(35, 42, 52, 0.04);
+
+  strong {
+    color: #20242b;
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    overflow-wrap: anywhere;
+  }
+
+  span {
+    color: #69717d;
+  }
+}
+
+.word-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// Como el de pronunciación de los ejercicios.
+.speak-button {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  --background: rgba(var(--ion-color-primary-rgb), 0.1);
+  --border-radius: 50%;
+  --color: var(--ion-color-primary);
+  --padding-start: 0;
+  --padding-end: 0;
+}

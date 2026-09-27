@@ -1,0 +1,15 @@
+<ion-tabs (ionTabsWillChange)="onTabWillChange($event.tab)" (ionTabsDidChange)="onTabShown($event.tab)">
+  <ion-tab-bar slot="bottom" (touchstart)="onBarTouchStart($event)" (touchmove)="onBarTouchMove($event)"
+    (touchend)="onBarTouchEnd()" (ionTabButtonClick)="onTabButtonClick($event)">
+    <div class="tab-indicator" [style.transform]="'translateX(' + currentIndex * 100 + '%)'" aria-hidden="true"></div>
+    <ion-tab-button tab="today" aria-label="Hoy" title="Hoy">
+      <ion-icon name="today-outline" aria-hidden="true"></ion-icon>
+    </ion-tab-button>
+    <ion-tab-button tab="topics" aria-label="Temas" title="Temas">
+      <ion-icon name="library-outline" aria-hidden="true"></ion-icon>
+    </ion-tab-button>
+    <ion-tab-button tab="progress" aria-label="Progreso" title="Progreso">
+      <ion-icon name="stats-chart-outline" aria-hidden="true"></ion-icon>
+    </ion-tab-button>
+  </ion-tab-bar>
+</ion-tabs>

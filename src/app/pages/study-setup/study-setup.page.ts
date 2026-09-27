@@ -1,7 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { addIcons } from 'ionicons';
 import {
   IonContent,
@@ -15,34 +16,13 @@ import {
   AlertController
 } from '@ionic/angular/standalone';
 import {
-  bookOutline,
   checkmarkCircle,
   bookmarkOutline,
   sparklesOutline,
   arrowForwardOutline,
-  restaurantOutline,
-  airplaneOutline,
-  pawOutline,
-  briefcaseOutline,
-  medkitOutline,
-  barbellOutline,
-  musicalNotesOutline,
-  laptopOutline,
-  homeOutline,
-  shirtOutline,
-  cloudOutline,
-  cashOutline,
-  colorPaletteOutline,
-  flaskOutline,
-  languageOutline,
-  cartOutline,
-  schoolOutline,
-  leafOutline,
-  carOutline,
-  peopleOutline,
-  refresh,
-  statsChartOutline
+  refresh
 } from 'ionicons/icons';
+import { registerTopicIcons, topicIcon } from 'src/app/services/topic-icon';
 import { Flashcard, FlashcardService, TopicProgress, TopicResult } from 'src/app/services/flashcard';
 import { toTopicKey } from 'src/app/services/topic-key';
 import { AppUpdateService } from 'src/app/services/app-update';
@@ -73,8 +53,7 @@ interface Topic {
     IonIcon,
     IonSpinner,
     IonActionSheet,
-    FormsModule,
-    RouterLink
+    FormsModule
   ],
   templateUrl: './study-setup.page.html',
   styleUrls: ['./study-setup.page.scss'],
@@ -96,6 +75,7 @@ export class StudySetupPage implements OnInit {
   topicMenuOpen = false;
   menuTopic: Topic | null = null;
   private topicPressTimer?: ReturnType<typeof setTimeout>;
+  private topicPressStart = { x: 0, y: 0 };
   private ignoreNextTopicClick = false;
 
   selectedTopic: string | null = null;
@@ -105,45 +85,9 @@ export class StudySetupPage implements OnInit {
   level: EnglishLevel = loadEnglishLevel();
 
   constructor() {
-    addIcons({
-      bookOutline, checkmarkCircle, bookmarkOutline, sparklesOutline,
-      arrowForwardOutline,
-      restaurantOutline, airplaneOutline, pawOutline, briefcaseOutline,
-      medkitOutline, barbellOutline, musicalNotesOutline, laptopOutline,
-      homeOutline, shirtOutline, cloudOutline, cashOutline, colorPaletteOutline,
-      flaskOutline, languageOutline, cartOutline, schoolOutline, leafOutline,
-      carOutline, peopleOutline, refresh, statsChartOutline
-    });
-  }
-
-  private static readonly ICON_MAP: ReadonlyArray<readonly [RegExp, string]> = [
-    [/(comida|cocin|receta|gastronom|food|cook|meal|restaurant)/i, 'restaurant-outline'],
-    [/(viaje|viajar|ciudad|país|pais|destino|cultura|travel|trip|country)/i, 'airplane-outline'],
-    [/(animal|mascota|naturaleza|planta|pet|nature)/i, 'paw-outline'],
-    [/(negocio|empresa|trabajo|oficina|profesi[oó]n|business|work|office)/i, 'briefcase-outline'],
-    [/(cuerpo|salud|m[eé]dico|doctor|enfermedad|body|health|medical)/i, 'medkit-outline'],
-    [/(deporte|ejercicio|gimnasio|f[uú]tbol|sport|exercise|gym)/i, 'barbell-outline'],
-    [/(m[uú]sica|canci[oó]n|instrumento|music|song)/i, 'musical-notes-outline'],
-    [/(tecnolog|comput|c[oó]digo|programaci[oó]n|internet|tech|code)/i, 'laptop-outline'],
-    [/(familia|hogar|casa|family|home|house)/i, 'home-outline'],
-    [/(ropa|moda|fashion|clothes)/i, 'shirt-outline'],
-    [/(clima|tiempo|lluvia|sol|weather|climate)/i, 'cloud-outline'],
-    [/(dinero|finanz|precio|econom|money|finance|price)/i, 'cash-outline'],
-    [/(arte|pintura|dibujo|dise[ñn]o|art|paint|draw)/i, 'color-palette-outline'],
-    [/(ciencia|qu[ií]mica|biolog|f[ií]sica|science|space)/i, 'flask-outline'],
-    [/(idioma|lenguaje|gram[aá]tica|vocabulario|language|grammar)/i, 'language-outline'],
-    [/(compra|tienda|mercado|shopping|shop|store)/i, 'cart-outline'],
-    [/(escuela|educaci[oó]n|estudio|aprend|school|education|study)/i, 'school-outline'],
-    [/(ecolog|ambient|sosten|ecology|environment)/i, 'leaf-outline'],
-    [/(coche|auto|carro|transporte|veh[ií]culo|car|transport)/i, 'car-outline'],
-    [/(gente|persona|amigo|social|people|friend)/i, 'people-outline']
-  ];
-
-  private pickIcon(label: string): string {
-    for (const [pattern, icon] of StudySetupPage.ICON_MAP) {
-      if (pattern.test(label)) return icon;
-    }
-    return 'book-outline';
+    addIcons({ checkmarkCircle, bookmarkOutline, sparklesOutline, arrowForwardOutline, refresh });
+    registerTopicIcons();
+    this.flashcardService.sessionEnded.pipe(takeUntilDestroyed()).subscribe(() => this.ionViewWillEnter());
   }
 
   async ngOnInit() {
@@ -155,7 +99,7 @@ export class StudySetupPage implements OnInit {
       this.topics = result.topics.map(label => ({
         id: toTopicKey(label),
         label,
-        icon: this.pickIcon(label),
+        icon: topicIcon(label),
         fromLocal: result.fromLocal
       }));
       await this.refreshProgress();
@@ -167,7 +111,7 @@ export class StudySetupPage implements OnInit {
     }
   }
 
-  // Al volver de una sesión, el progreso (y los temas recién guardados) cambian.
+  // Al volver a la pestaña o al terminar una sesión, el progreso (y los temas recién guardados) cambian.
   async ionViewWillEnter() {
     if (!this.loadingTopics && this.topics.length) {
       await this.refreshProgress();
@@ -212,10 +156,11 @@ export class StudySetupPage implements OnInit {
     this.selectedTopic = this.selectedTopic === topicId ? null : topicId;
   }
 
-  startTopicPress(topic: Topic) {
+  startTopicPress(topic: Topic, event: PointerEvent) {
     this.cancelTopicPress();
     if (!topic.fromLocal) return;
 
+    this.topicPressStart = { x: event.clientX, y: event.clientY };
     this.topicPressTimer = setTimeout(() => {
       this.ignoreNextTopicClick = true;
       this.menuTopic = topic;
@@ -227,6 +172,13 @@ export class StudySetupPage implements OnInit {
     if (this.topicPressTimer) {
       clearTimeout(this.topicPressTimer);
       this.topicPressTimer = undefined;
+    }
+  }
+
+  // Si el dedo se mueve (p. ej. al deslizar entre pestañas, que arrastra la tarjeta con él), no es una pulsación larga.
+  moveTopicPress(event: PointerEvent) {
+    if (this.topicPressTimer && Math.hypot(event.clientX - this.topicPressStart.x, event.clientY - this.topicPressStart.y) > 10) {
+      this.cancelTopicPress();
     }
   }
 
@@ -334,7 +286,7 @@ export class StudySetupPage implements OnInit {
       const suggestedTopics = labels.map(label => ({
         id: toTopicKey(label),
         label,
-        icon: this.pickIcon(label),
+        icon: topicIcon(label),
         fromLocal: false
       }));
 
@@ -382,7 +334,7 @@ export class StudySetupPage implements OnInit {
         await this.refreshProgress();
         return;
       }
-      await this.router.navigate(['/flashcards'], { state: { topic: topic.label, cards } });
+      await this.router.navigate(['/flashcards'], { state: { topic: topic.label, cards, returnUrl: '/tabs/topics' } });
     } catch (error) {
       console.error('No se pudieron generar las tarjetas', error);
       this.showRequestError('No se pudieron generar las tarjetas.', error);

@@ -11,6 +11,8 @@ export interface TopicStats {
   // Igual que en la pantalla de temas: acertadas en su último repaso o ya aprendidas.
   known: number;
   total: number;
+  // Repasos que ya tocan, como dueToday.
+  due: number;
 }
 
 export interface HardWord extends Pick<Flashcard, 'word' | 'translation' | 'imageUrl' | 'mnemonic'> {
@@ -80,7 +82,8 @@ export class StatsService {
         .map(studySet => ({
           topic: studySet.topic,
           known: studySet.cards.filter(card => card.learned || (card.box ?? 0) >= 1).length,
-          total: studySet.cards.length
+          total: studySet.cards.length,
+          due: studySet.cards.filter(card => card.nextReview && card.nextReview <= nowIso).length
         }))
         .filter(topic => topic.total)
         .sort((a, b) => a.topic.localeCompare(b.topic, 'es')),

@@ -1,13 +1,10 @@
-<ion-header class="ion-no-border">
-  <ion-toolbar>
-    <ion-buttons slot="start">
-      <ion-back-button defaultHref="/study-setup" text=""></ion-back-button>
-    </ion-buttons>
-    <ion-title>Tu progreso</ion-title>
-  </ion-toolbar>
-</ion-header>
-
 <ion-content class="ion-padding">
+
+  <header class="page-heading">
+    <p class="page-eyebrow">Tu progreso</p>
+    <h1 class="page-title">Así vas</h1>
+    <p class="page-intro">Tu racha, cómo avanzan tus palabras y las que más te cuestan.</p>
+  </header>
 
   <div class="stats-loading" *ngIf="loading" aria-live="polite">
     <ion-spinner name="crescent"></ion-spinner>
@@ -19,7 +16,7 @@
   <div class="stats-empty" *ngIf="stats && !stats.totalWords">
     <ion-icon name="stats-chart-outline" aria-hidden="true"></ion-icon>
     <p>Aún no hay nada que medir. Elige un tema y practica: aquí verás tu racha y cómo avanzan tus palabras.</p>
-    <ion-button [routerLink]="['/study-setup']">Elegir un tema</ion-button>
+    <ion-button [routerLink]="['/tabs/topics']">Elegir un tema</ion-button>
   </div>
 
   <ng-container *ngIf="stats as s">

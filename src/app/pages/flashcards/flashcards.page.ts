@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButtons,
-  IonButton, IonIcon, IonProgressBar, IonSpinner, ModalController
+  IonButton, IonIcon, IonProgressBar, IonSpinner, ModalController, NavController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -21,6 +21,7 @@ import { ActionBarComponent, ActionMode } from './action-bar/action-bar.componen
 import { SpeechRecognitionService } from 'src/app/services/speech-recognition';
 import { isSameWord, wordPattern } from 'src/app/services/word-forms';
 import { ToastService } from 'src/app/services/toast';
+import { PronunciationService } from 'src/app/services/pronunciation';
 
 // Los que se sortean. speak: ver la imagen y decir la palabra en voz alta. write: verla y escribirla.
 type DrawnExercise = 'card' | QuizKind | 'speak' | 'write';
@@ -123,6 +124,8 @@ export class FlashcardsPage {
   private toast = inject(ToastService);
   private speech = inject(SpeechRecognitionService);
   private modalController = inject(ModalController);
+  private navController = inject(NavController);
+  private pronunciation = inject(PronunciationService);
 
   cards: Flashcard[] = [];
   currentIndex = 0;
@@ -172,6 +175,8 @@ export class FlashcardsPage {
   // Las escrituras van en fila: deshacer debe restaurar después de que se guardó la respuesta y antes de la siguiente.
   private saveQueue: Promise<unknown> = Promise.resolve();
   topic = '';
+  // Pestaña a la que se vuelve al salir (la que abrió la sesión).
+  private returnUrl = '/tabs/topics';
   dragX = 0;
   dragY = 0;
   isDragging = false;
@@ -195,11 +200,12 @@ export class FlashcardsPage {
       ?? history.state; // fallback si se recarga la página
 
     const topic = state?.['topic'] as string | undefined;
-    // Las elige la pantalla de inicio (repasos del tema o palabras recién añadidas).
+    // Las elige la pestaña de la que se viene (repasos del tema o palabras recién añadidas), adonde se vuelve al salir.
     const sessionCards = (state?.['cards'] ?? []) as Flashcard[];
+    this.returnUrl = state?.['returnUrl'] ?? '/tabs/topics';
 
     if (!topic || !sessionCards.length) {
-      await this.router.navigate(['/study-setup']);
+      await this.router.navigate([this.returnUrl]);
       return;
     }
 
@@ -706,7 +712,12 @@ export class FlashcardsPage {
     this.clearQuizTimer();
     this.clearAutoSpeakTimer();
     this.speech.stop();
-    this.router.navigate(['/study-setup']);
+    this.navController.navigateBack(this.returnUrl);
+  }
+
+  // Al salir de cualquier forma (también con el botón atrás de Android), cuando terminen de guardarse las respuestas.
+  ionViewWillLeave() {
+    this.saveQueue.then(() => this.flashcardService.sessionEnded.next());
   }
 
   next() {
@@ -880,56 +891,21 @@ export class FlashcardsPage {
 
   // interrupt: el botón de pronunciación corta lo que esté sonando; la voz automática se encola tras la locución muda.
   speak(word: string, interrupt = true) {
-    const synthesizer = window.speechSynthesis;
-    if (!synthesizer || !word.trim()) return;
-
+    // Si se pulsa el botón antes de la voz automática, que no suene dos veces.
     if (interrupt) {
-      // Si se pulsa el botón antes de la voz automática, que no suene dos veces.
       this.clearAutoSpeakTimer();
-      // cancel() justo antes de speak() puede recortar el comienzo: solo si de verdad hay algo sonando.
-      if (synthesizer.speaking || synthesizer.pending) {
-        synthesizer.cancel();
-      }
     }
-    synthesizer.resume();
-    synthesizer.speak(this.createUtterance(synthesizer, word));
+    this.pronunciation.speak(word, interrupt);
   }
 
-  // En el móvil el audio se "duerme" tras un rato en silencio y se come el comienzo de la palabra.
-  // Una locución muda lo despierta mientras entra la tarjeta; la voz real se encola detrás.
+  // La locución muda despierta el audio del móvil mientras entra la tarjeta; la voz real va detrás.
   private speakSoon(word: string) {
     this.clearAutoSpeakTimer();
-    this.warmUpSpeech(word);
+    this.pronunciation.warmUp(word);
     this.autoSpeakTimer = setTimeout(() => {
       this.autoSpeakTimer = undefined;
       this.speak(word, false);
     }, 600);
-  }
-
-  private warmUpSpeech(word: string) {
-    const synthesizer = window.speechSynthesis;
-    if (!synthesizer || !word.trim()) return;
-
-    if (synthesizer.speaking || synthesizer.pending) {
-      synthesizer.cancel();
-    }
-    const utterance = this.createUtterance(synthesizer, word);
-    utterance.volume = 0;
-    // Más rápida para que termine antes de que empiece la voz real.
-    utterance.rate = 2;
-    synthesizer.speak(utterance);
-  }
-
-  private createUtterance(synthesizer: SpeechSynthesis, word: string): SpeechSynthesisUtterance {
-    const utterance = new SpeechSynthesisUtterance(word.trim());
-    utterance.rate = 0.85;
-    utterance.lang = 'en-US';
-    const englishVoice = synthesizer.getVoices()
-      .find(voice => voice.lang.toLowerCase().startsWith('en'));
-    if (englishVoice) {
-      utterance.voice = englishVoice;
-    }
-    return utterance;
   }
 
   private clearAutoSpeakTimer() {
