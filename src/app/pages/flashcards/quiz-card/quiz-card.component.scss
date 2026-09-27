@@ -23,6 +23,16 @@
   }
 }
 
+// Escuchar: el botón es la pregunta, así que destaca más que el de pronunciación.
+.listen-button {
+  width: 60px;
+  height: 60px;
+  --border-radius: 50%;
+  --padding-start: 0;
+  --padding-end: 0;
+  font-size: 1.3rem;
+}
+
 // Opciones: estado común de acierto / fallo.
 .image-option,
 .word-option {

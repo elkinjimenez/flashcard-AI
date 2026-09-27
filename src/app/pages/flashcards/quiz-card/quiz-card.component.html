@@ -9,13 +9,27 @@
         <ion-icon slot="icon-only" name="volume-high-outline"></ion-icon>
       </ion-button>
     </div>
+  </ng-container>
 
+  <!-- Oír la palabra → elegir su imagen. Suena sola al aparecer; la palabra solo se ve al responder. -->
+  <ng-container *ngIf="kind === 'listen'">
+    <span class="exercise-instruction" id="quiz-instruction">Escucha y elige su imagen</span>
+    <div class="quiz-word">
+      <ion-button class="listen-button" aria-label="Escuchar la palabra" (click)="speak.emit()">
+        <ion-icon slot="icon-only" name="volume-high-outline"></ion-icon>
+      </ion-button>
+      <strong *ngIf="revealed">{{ card.word }}</strong>
+    </div>
+  </ng-container>
+
+  <!-- Elegir la imagen: lo comparten "elige la imagen" y "escucha". -->
+  <ng-container *ngIf="kind !== 'pick-word'">
     <div class="image-options" role="group" aria-labelledby="quiz-instruction">
       <!-- aria-disabled en lugar de disabled: así el foco no se pierde al responder. -->
       <button type="button" *ngFor="let option of options; let i = index" class="image-option"
         [attr.data-state]="optionState(option)" [attr.aria-disabled]="revealed ? 'true' : null"
         [attr.aria-label]="revealed ? option.word : 'Imagen ' + (i + 1)" (click)="choose.emit(option)">
-        <img *ngIf="!isFailed(option.imageUrl)" [src]="option.imageUrl" alt="" draggable="false"
+        <img *ngIf="!isFailed(option.imageUrl)" [src]="option.imageUrl" alt="" crossorigin="anonymous" draggable="false"
           [class.ready]="isLoaded(option.imageUrl)" (load)="onImageLoad(option.imageUrl)"
           (error)="onImageError(option.imageUrl)" />
         <ion-icon *ngIf="isFailed(option.imageUrl)" class="image-missing" name="image-outline" aria-hidden="true"></ion-icon>
@@ -24,13 +38,16 @@
         <ng-container *ngTemplateOutlet="badge; context: { $implicit: optionState(option) }"></ng-container>
       </button>
     </div>
+    <button type="button" class="decline" *ngIf="kind === 'listen' && !revealed" (click)="declineListening.emit()">
+      Ahora no puedo escuchar
+    </button>
   </ng-container>
 
   <!-- Imagen → elegir su palabra. -->
   <ng-container *ngIf="kind === 'pick-word'">
     <span class="exercise-instruction" id="quiz-instruction">¿Qué palabra es?</span>
     <div class="exercise-image">
-      <img *ngIf="!isFailed(card.imageUrl)" [src]="card.imageUrl" alt="" draggable="false"
+      <img *ngIf="!isFailed(card.imageUrl)" [src]="card.imageUrl" alt="" crossorigin="anonymous" draggable="false"
         [class.ready]="isLoaded(card.imageUrl)" (load)="onImageLoad(card.imageUrl)"
         (error)="onImageError(card.imageUrl)" />
       <div class="image-fallback" *ngIf="isFailed(card.imageUrl)">

@@ -29,7 +29,7 @@
   </div>
 
   <div class="topics-error" *ngIf="!loadingTopics && topicsError" role="alert">
-    <p>No se pudieron cargar los temas.</p>
+    <p>No se pudieron cargar los temas. {{ topicsError }}</p>
     <ion-button fill="outline" (click)="reload()">
       <ion-icon slot="start" name="refresh"></ion-icon>
       Recargar
@@ -62,15 +62,12 @@
     <ion-icon *ngIf="!loadingMoreTopics" slot="end" name="sparkles-outline"></ion-icon>
     {{ loadingMoreTopics ? ' Buscando temas...' : 'Más temas' }}
   </ion-button>
-  <p class="topics-more-error" *ngIf="moreTopicsError" role="alert">
-    No se pudieron cargar más temas. Intenta nuevamente.
-  </p>
 
   <div class="bottom-section">
     <h2 class="section-title">¿Cuántas palabras?</h2>
 
     <ion-segment class="card-count-segment" [(ngModel)]="cardCount" mode="ios"
-      [disabled]="loadingTopics || topicsError">
+      [disabled]="loadingTopics || !!topicsError">
       <ion-segment-button [value]="10">
         <ion-label>10</ion-label>
       </ion-segment-button>
@@ -84,7 +81,7 @@
 
     <div class="start-actions">
       <ion-button expand="block" size="large" class="start-btn"
-        [disabled]="loadingTopics || topicsError || !!loadingCards || !selectedTopic || nothingToPractice"
+        [disabled]="loadingTopics || !!topicsError || !!loadingCards || !selectedTopic || nothingToPractice"
         (click)="startStudy()">
         <ion-spinner *ngIf="loadingCards === 'practice'" name="crescent"></ion-spinner>
         {{ loadingCards === 'practice' ? (selectedSavedTopic ? 'Preparando...' : 'Generando tarjetas...') : 'Practicar' }}
@@ -105,9 +102,6 @@
     </div>
     <p class="section-hint" *ngIf="nothingToPractice">
       Ya sabes todas las palabras de este tema: añade nuevas para seguir.
-    </p>
-    <p class="cards-error" *ngIf="cardsError" role="alert">
-      No se pudieron generar las tarjetas. Intenta nuevamente.
     </p>
   </div>
 

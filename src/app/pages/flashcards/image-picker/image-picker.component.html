@@ -1,0 +1,37 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Imagen de "{{ card.word }}"</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="cancel()">Cancelar</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-searchbar [(ngModel)]="query" [placeholder]="placeholder" enterkeyhint="search"
+      (keydown.enter)="search()"></ion-searchbar>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <p class="picker-intro">Elige la que muestre <strong>{{ card.word }}</strong> con más claridad.</p>
+
+  <div class="picker-loading" *ngIf="loading" aria-live="polite">
+    <ion-spinner name="crescent"></ion-spinner>
+    <span>Buscando imágenes...</span>
+  </div>
+
+  <p class="picker-empty" *ngIf="!loading && !candidates.length" role="status">{{ emptyMessage }}</p>
+
+  <div class="picker-grid" *ngIf="!loading && candidates.length">
+    <button type="button" *ngFor="let candidate of candidates" class="picker-option"
+      [class.current]="isCurrent(candidate)" [attr.aria-current]="isCurrent(candidate) ? 'true' : null"
+      [attr.aria-label]="candidate.title || 'GIF'" (click)="choose(candidate)">
+      <!-- Sin crossorigin a propósito: son miniaturas de un solo uso y, como respuesta opaca, el service worker no
+           las guarda ni ocupan sitio de las imágenes de las tarjetas. -->
+      <img [src]="candidate.previewUrl" alt="" loading="lazy" draggable="false" />
+      <span class="current-badge" *ngIf="isCurrent(candidate)">
+        <ion-icon name="checkmark-circle" aria-hidden="true"></ion-icon>
+        Actual
+      </span>
+    </button>
+  </div>
+</ion-content>

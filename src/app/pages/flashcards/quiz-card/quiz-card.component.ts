@@ -5,8 +5,8 @@ import { addIcons } from 'ionicons';
 import { checkmarkCircle, closeCircle, imageOutline, volumeHighOutline } from 'ionicons/icons';
 import { Flashcard } from 'src/app/services/flashcard';
 
-// pick-image: palabra → elegir su imagen. pick-word: imagen → elegir su palabra.
-export type QuizKind = 'pick-image' | 'pick-word';
+// pick-image: palabra → elegir su imagen. pick-word: imagen → elegir su palabra. listen: oír la palabra → elegir su imagen.
+export type QuizKind = 'pick-image' | 'pick-word' | 'listen';
 export type QuizOptionState = 'correct' | 'wrong' | 'dimmed' | null;
 
 // Ejercicio de opción múltiple. Las opciones y la elección las lleva la página, igual que el resto de la sesión (deshacer, repetir difíciles).
@@ -27,6 +27,8 @@ export class QuizCardComponent {
   @Input() revealed = false;
   @Output() choose = new EventEmitter<Flashcard>();
   @Output() speak = new EventEmitter<void>();
+  // Ahora no puede escuchar: la página deja de sortear el ejercicio de escuchar.
+  @Output() declineListening = new EventEmitter<void>();
   // No cargó la imagen de la palabra (la pregunta en "elige la palabra", la opción correcta en "elige la imagen").
   @Output() imageError = new EventEmitter<void>();
 

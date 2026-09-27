@@ -25,5 +25,17 @@
         ]
       }
     }
+  ],
+  "dataGroups": [
+    {
+      "name": "klipy-images",
+      "urls": ["https://static.klipy.com/**"],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 500,
+        "maxAge": "365d",
+        "cacheOpaqueResponses": false
+      }
+    }
   ]
 }

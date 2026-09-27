@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, timeout } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { toTopicKey } from './topic-key';
 import { EnglishLevel, englishLevelLabel } from './english-level';
@@ -62,6 +62,9 @@ const examplesResponseSchema = {
 
 @Injectable({ providedIn: 'root' })
 export class GeminiService {
+  // Generar 20 palabras con su JSON tarda unos segundos: pasado esto la conexión se da por colgada.
+  private readonly requestTimeoutMs = 30000;
+
   constructor(private http: HttpClient) {}
 
   async suggestTopics(excludedTopics: string[]): Promise<string[]> {
@@ -131,7 +134,7 @@ export class GeminiService {
       environment.geminiTopicsUrl,
       generationConfig ? { contents, generationConfig } : { contents },
       { params }
-    ));
+    ).pipe(timeout(this.requestTimeoutMs)));
 
     return response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
   }

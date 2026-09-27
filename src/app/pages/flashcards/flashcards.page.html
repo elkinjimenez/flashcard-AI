@@ -1,7 +1,7 @@
 <ion-header class="ion-no-border">
   <ion-toolbar>
     <ion-buttons slot="start">
-      <ion-button fill="clear" class="exit-button" (click)="exitStudy()" aria-label="Salir de la práctica">
+      <ion-button fill="clear" class="toolbar-button" (click)="exitStudy()" aria-label="Salir de la práctica">
         <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
       </ion-button>
     </ion-buttons>
@@ -12,6 +12,12 @@
         <span class="progress-count">{{ currentIndex + 1 }} de {{ cards.length }}</span>
       </span>
     </ion-title>
+    <ion-buttons slot="end" *ngIf="canChangeImage">
+      <ion-button fill="clear" class="toolbar-button" (click)="changeImage()" aria-label="Cambiar imagen"
+        title="Cambiar imagen">
+        <ion-icon slot="icon-only" name="images-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
   <div class="progress-area" aria-label="Progreso de la sesión">
     <ion-progress-bar [value]="progress"></ion-progress-bar>
@@ -36,7 +42,7 @@
     [kind]="kind" [card]="currentCard!" [options]="quizOptions" [choice]="quizChoice" [revealed]="exerciseAnswered"
     [attr.data-motion]="cardMotion" (animationend)="onCardAnimationEnd($event)"
     (choose)="chooseQuizOption($event)" (speak)="speak(currentCard!.word)"
-    (imageError)="onExerciseImageError()"></app-quiz-card>
+    (declineListening)="onListeningDeclined()" (imageError)="onExerciseImageError()"></app-quiz-card>
 
   <app-speak-card class="quiz-scene" *ngIf="!loading && !loadingError && !summary && exercise === 'speak'"
     [card]="currentCard!" [round]="exerciseRound"
@@ -76,7 +82,10 @@
           <ng-container *ngIf="!imageUnavailable">
             <span class="image-loading" *ngIf="!imageLoaded">Cargando imagen...</span>
             <!-- alt vacío: el texto alternativo delataría la palabra; la tarjeta ya tiene su aria-label. -->
-            <img [src]="card.imageUrl" alt="" draggable="false" (load)="onImageLoaded()" (error)="onImageError()" />
+            <!-- crossorigin: sin él la respuesta es opaca y el service worker no la guarda para verla sin conexión
+                 (ver dataGroups en ngsw-config.json). Klipy lo permite. -->
+            <img [src]="card.imageUrl" alt="" crossorigin="anonymous" draggable="false" (load)="onImageLoaded()"
+              (error)="onImageError()" />
           </ng-container>
         </div>
         <!-- Sin imagen no hay nada que adivinar: se muestra la palabra. -->

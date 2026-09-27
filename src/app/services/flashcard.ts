@@ -141,9 +141,19 @@ export class FlashcardService {
     return previous;
   }
 
+  // Solo el progreso: lo demás (p. ej. una imagen cambiada después de responder) se queda como está.
   async restoreCard(topic: string, previous: Flashcard): Promise<void> {
     await this.studySets.updateCards(topic, cards => cards.map(card =>
-      card.word === previous.word ? previous : card
+      card.word === previous.word
+        ? { ...card, learned: previous.learned, box: previous.box, nextReview: previous.nextReview }
+        : card
+    ));
+  }
+
+  // Imagen elegida a mano cuando la de la IA no muestra bien la palabra. No toca el progreso.
+  async changeImage(topic: string, word: string, imageUrl: string): Promise<void> {
+    await this.studySets.updateCards(topic, cards => cards.map(card =>
+      card.word === word ? { ...card, imageUrl } : card
     ));
   }
 

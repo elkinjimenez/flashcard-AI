@@ -3,17 +3,18 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButtons,
-  IonButton, IonIcon, IonProgressBar, IonSpinner
+  IonButton, IonIcon, IonProgressBar, IonSpinner, ModalController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   volumeHighOutline, arrowForwardOutline, arrowBackOutline, closeOutline, sparklesOutline, imageOutline,
-  eyeOutline, eyeOffOutline, arrowUndoOutline, checkmark, close, checkmarkCircle, refreshCircle
+  eyeOutline, eyeOffOutline, arrowUndoOutline, checkmark, close, checkmarkCircle, refreshCircle, imagesOutline
 } from 'ionicons/icons';
 import { Flashcard, FlashcardService } from 'src/app/services/flashcard';
 import { SessionSummary, SessionSummaryComponent } from './session-summary/session-summary.component';
 import { QuizCardComponent, QuizKind } from './quiz-card/quiz-card.component';
 import { SpeakCardComponent, SpeechUnavailableReason } from './speak-card/speak-card.component';
+import { ImagePickerComponent } from './image-picker/image-picker.component';
 import { SpeechRecognitionService } from 'src/app/services/speech-recognition';
 import { wordPattern } from 'src/app/services/word-forms';
 import { ToastService } from 'src/app/services/toast';
@@ -94,6 +95,8 @@ export class FlashcardsPage {
   private lastExercise: ExerciseKind | null = null;
   // Sin micrófono o sin permiso, el ejercicio de habla deja de salir en la sesión.
   private speechBlocked = false;
+  // Si ahora no puede escuchar, tampoco sale el de escuchar.
+  private listeningDeclined = false;
   private quizTimer?: ReturnType<typeof setTimeout>;
   // Resultado de cada palabra en la sesión; 'hard' si se marcó difícil al menos una vez.
   private sessionResults = new Map<string, 'knew' | 'hard'>();
@@ -109,18 +112,20 @@ export class FlashcardsPage {
   private startY = 0;
   private startTime = 0;
   private readonly SWIPE_THRESHOLD = 100;
-  private flipSpeakTimer?: ReturnType<typeof setTimeout>;
+  // Voz automática al voltear la tarjeta o al aparecer el ejercicio de escuchar.
+  private autoSpeakTimer?: ReturnType<typeof setTimeout>;
   @ViewChild(SpeakCardComponent) private speakCard?: SpeakCardComponent;
 
   constructor(
     private router: Router,
     private flashcardService: FlashcardService,
     private toast: ToastService,
-    private speech: SpeechRecognitionService
+    private speech: SpeechRecognitionService,
+    private modalController: ModalController
   ) {
     addIcons({
       volumeHighOutline, arrowForwardOutline, arrowBackOutline, closeOutline, sparklesOutline, imageOutline,
-      eyeOutline, eyeOffOutline, arrowUndoOutline, checkmark, close, checkmarkCircle, refreshCircle
+      eyeOutline, eyeOffOutline, arrowUndoOutline, checkmark, close, checkmarkCircle, refreshCircle, imagesOutline
     });
   }
 
@@ -200,12 +205,20 @@ export class FlashcardsPage {
       .join(': ');
   }
 
+  // Solo con la palabra a la vista: el selector la muestra, así que antes delataría la respuesta.
+  get canChangeImage(): boolean {
+    if (this.loading || this.loadingError || this.summary || !this.currentCard) return false;
+    return this.exercise === 'card' ? this.isFlipped || this.imageUnavailable : this.exerciseAnswered;
+  }
+
   get canUndo(): boolean {
     return this.history.length > 0;
   }
 
   get quizKind(): QuizKind | null {
-    return this.exercise === 'pick-image' || this.exercise === 'pick-word' ? this.exercise : null;
+    return this.exercise === 'pick-image' || this.exercise === 'pick-word' || this.exercise === 'listen'
+      ? this.exercise
+      : null;
   }
 
   get exerciseAnswered(): boolean {
@@ -327,8 +340,9 @@ export class FlashcardsPage {
     this.registerAnswer(card, knew);
     this.speak(card.word);
 
-    // En "elige la imagen" espera más: tras responder, cada imagen muestra su palabra y da tiempo a leerlas.
-    this.autoAdvanceMs = !knew ? 0 : this.exercise === 'pick-image' ? 3000 : this.exercise === 'speak' ? 1500 : 1000;
+    // Eligiendo imagen espera más: tras responder, cada imagen muestra su palabra y da tiempo a leerlas.
+    const pickedImage = this.exercise === 'pick-image' || this.exercise === 'listen';
+    this.autoAdvanceMs = !knew ? 0 : pickedImage ? 3000 : this.exercise === 'speak' ? 1500 : 1000;
     if (this.autoAdvanceMs) {
       this.advanceAfter(this.autoAdvanceMs);
     }
@@ -346,6 +360,16 @@ export class FlashcardsPage {
       : 'Vale, seguimos sin ejercicios de voz en esta sesión.', 'dark');
   }
 
+  // Ahora no puede escuchar: el ejercicio de escuchar deja de salir y esta tarjeta cambia de ejercicio.
+  onListeningDeclined() {
+    this.listeningDeclined = true;
+    if (this.exercise !== 'listen' || this.exerciseAnswered) return;
+
+    this.prepareExercise();
+    this.cardMotion = 'enter';
+    this.showToast('Vale, seguimos sin ejercicios de escuchar en esta sesión.', 'dark');
+  }
+
   // La imagen de la que depende el ejercicio no cargó: no se podría responder, así que pasa a tarjeta normal
   // (que sin imagen muestra la palabra).
   onExerciseImageError() {
@@ -354,6 +378,42 @@ export class FlashcardsPage {
     this.lastExercise = 'card';
     this.quizOptions = [];
     this.imageFailed = true;
+  }
+
+  async changeImage() {
+    const card = this.currentCard;
+    if (!card || this.answering) return;
+
+    // Mientras elige no se avanza solo: tras cambiarla, seguirá con Continuar.
+    this.clearQuizTimer();
+    this.autoAdvanceMs = 0;
+
+    const modal = await this.modalController.create({ component: ImagePickerComponent, componentProps: { card } });
+    await modal.present();
+    const { data: imageUrl, role } = await modal.onWillDismiss<string>();
+    if (role !== 'confirm' || !imageUrl || imageUrl === card.imageUrl) return;
+
+    this.replaceImage(card.word, imageUrl);
+    const topic = this.topic;
+    this.enqueueSave(async () => {
+      try {
+        await this.flashcardService.changeImage(topic, card.word, imageUrl);
+        this.showToast('Imagen actualizada.', 'dark');
+      } catch (error) {
+        console.error('No se pudo guardar la imagen', error);
+        this.showError(`No se pudo guardar la imagen de "${card.word}".`);
+      }
+    });
+  }
+
+  // En todas las copias de la tarjeta en la sesión (las difíciles se repiten) y en las opciones de los ejercicios.
+  private replaceImage(word: string, imageUrl: string) {
+    const update = (card: Flashcard) => card.word === word ? { ...card, imageUrl } : card;
+    this.cards = this.cards.map(update);
+    this.topicCards = this.topicCards.map(update);
+    this.quizOptions = this.quizOptions.map(update);
+    this.imageLoaded = false;
+    this.imageFailed = false;
   }
 
   private advanceAfter(delayMs: number) {
@@ -427,7 +487,7 @@ export class FlashcardsPage {
 
   private revertStep(step: SessionStep) {
     this.summary = null;
-    this.clearFlipSpeakTimer();
+    this.clearAutoSpeakTimer();
     this.moveTo(step.index);
     this.cardMotion = 'enter-back';
 
@@ -489,27 +549,22 @@ export class FlashcardsPage {
 
   flip() {
     this.isFlipped = !this.isFlipped;
-    this.clearFlipSpeakTimer();
+    this.clearAutoSpeakTimer();
 
-    if (this.isFlipped) {
-      // En el móvil el audio se "duerme" tras un rato en silencio y se come el comienzo de la palabra.
-      // Una locución muda en el mismo toque lo despierta durante la animación; la voz real se encola detrás.
-      this.warmUpSpeech(this.currentCard?.word ?? '');
-      this.flipSpeakTimer = setTimeout(() => {
-        this.speakCurrentCard();
-        this.flipSpeakTimer = undefined;
-      }, 600);
+    if (this.isFlipped && this.currentCard) {
+      this.speakSoon(this.currentCard.word);
     }
   }
 
   exitStudy() {
     this.clearQuizTimer();
+    this.clearAutoSpeakTimer();
     this.speech.stop();
     this.router.navigate(['/study-setup']);
   }
 
   next() {
-    this.clearFlipSpeakTimer();
+    this.clearAutoSpeakTimer();
 
     if (this.currentIndex < this.cards.length - 1) {
       this.moveTo(this.currentIndex + 1);
@@ -530,10 +585,12 @@ export class FlashcardsPage {
     }
   }
 
-  // Cada aparición de una tarjeta sortea su ejercicio (tarjeta, elige la imagen, elige la palabra o dilo en voz alta)
+  // Cada aparición de una tarjeta sortea su ejercicio (tarjeta, elige la imagen, elige la palabra, escucha o dilo en voz alta)
   // sin repetir el anterior. Sin imagen, o sin otras palabras del tema que sirvan de opción, se muestra como tarjeta normal.
   private prepareExercise() {
     this.clearQuizTimer();
+    // La voz pendiente era del ejercicio anterior: en "elige la palabra" daría la respuesta.
+    this.clearAutoSpeakTimer();
     this.exercise = 'card';
     this.exerciseRound++;
     this.quizChoice = null;
@@ -545,6 +602,9 @@ export class FlashcardsPage {
     if (!card) return;
 
     const kinds: ExerciseKind[] = card.imageUrl ? ['card', 'pick-image', 'pick-word'] : ['card'];
+    if (card.imageUrl && 'speechSynthesis' in window && !this.listeningDeclined) {
+      kinds.push('listen');
+    }
     // Solo donde hay reconocimiento de voz (hoy, Chrome y Safari; no Firefox ni la app nativa).
     if (card.imageUrl && this.speech.isSupported && !this.speechBlocked) {
       kinds.push('speak');
@@ -562,6 +622,10 @@ export class FlashcardsPage {
       }
     }
     this.lastExercise = this.exercise;
+
+    if (this.exercise === 'listen') {
+      this.speakSoon(card.word);
+    }
   }
 
   // Hasta 3 palabras del tema, aprendidas o no, que no se confundan con la correcta.
@@ -576,8 +640,8 @@ export class FlashcardsPage {
       const translation = other.translation.toLowerCase();
       // Mismo significado (p. ej. "big" y "large"): serían dos respuestas correctas.
       if (seenWords.has(word) || seenTranslations.has(translation)) continue;
-      // En "elige la imagen" cada opción necesita una imagen propia.
-      if (kind === 'pick-image' && (!other.imageUrl || seenImages.has(other.imageUrl))) continue;
+      // Eligiendo imagen, cada opción necesita una imagen propia.
+      if (kind !== 'pick-word' && (!other.imageUrl || seenImages.has(other.imageUrl))) continue;
 
       seenWords.add(word);
       seenTranslations.add(translation);
@@ -645,7 +709,7 @@ export class FlashcardsPage {
 
     if (interrupt) {
       // Si se pulsa el botón antes de la voz automática, que no suene dos veces.
-      this.clearFlipSpeakTimer();
+      this.clearAutoSpeakTimer();
       // cancel() justo antes de speak() puede recortar el comienzo: solo si de verdad hay algo sonando.
       if (synthesizer.speaking || synthesizer.pending) {
         synthesizer.cancel();
@@ -653,6 +717,17 @@ export class FlashcardsPage {
     }
     synthesizer.resume();
     synthesizer.speak(this.createUtterance(synthesizer, word));
+  }
+
+  // En el móvil el audio se "duerme" tras un rato en silencio y se come el comienzo de la palabra.
+  // Una locución muda lo despierta mientras entra la tarjeta; la voz real se encola detrás.
+  private speakSoon(word: string) {
+    this.clearAutoSpeakTimer();
+    this.warmUpSpeech(word);
+    this.autoSpeakTimer = setTimeout(() => {
+      this.autoSpeakTimer = undefined;
+      this.speak(word, false);
+    }, 600);
   }
 
   private warmUpSpeech(word: string) {
@@ -681,10 +756,10 @@ export class FlashcardsPage {
     return utterance;
   }
 
-  private clearFlipSpeakTimer() {
-    if (this.flipSpeakTimer) {
-      clearTimeout(this.flipSpeakTimer);
-      this.flipSpeakTimer = undefined;
+  private clearAutoSpeakTimer() {
+    if (this.autoSpeakTimer) {
+      clearTimeout(this.autoSpeakTimer);
+      this.autoSpeakTimer = undefined;
     }
   }
 
@@ -694,13 +769,6 @@ export class FlashcardsPage {
 
   onImageError() {
     this.imageFailed = true;
-  }
-
-  private speakCurrentCard() {
-    const card = this.currentCard;
-    if (card) {
-      this.speak(card.word, false);
-    }
   }
 
 }

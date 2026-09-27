@@ -8,6 +8,8 @@ export interface ImageCandidate {
   // Klipy titula cada GIF con una descripción ("Whisking Egg Yolks in a Bowl"): sirve para elegir el más literal.
   title: string;
   url: string;
+  // Miniatura (220 px): pesa la mitad que `url`, para mostrar muchos a la vez al elegir a mano.
+  previewUrl: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -15,12 +17,18 @@ export class KlipyService {
   private readonly requestConcurrency = 4;
   private readonly requestTimeoutMs = 5000;
   private readonly resultsPerSearch = 8;
+  private readonly resultsPerManualSearch = 16;
 
   constructor(private http: HttpClient) {}
 
   // GIFs candidatos de cada tarjeta, en el mismo orden que `cards`.
   searchCandidates(cards: Flashcard[]): Promise<ImageCandidate[][]> {
     return this.mapWithConcurrency(cards, this.requestConcurrency, card => this.searchCardCandidates(card));
+  }
+
+  // Búsqueda escrita por el usuario al cambiar la imagen de una tarjeta. [] si no hay resultados o falla.
+  searchImages(term: string): Promise<ImageCandidate[]> {
+    return this.search(term, term, this.resultsPerManualSearch);
   }
 
   // Klipy busca por las palabras del título: la búsqueda visual de Gemini ("kitchen tongs") y la palabra sola dan
@@ -41,12 +49,12 @@ export class KlipyService {
     });
   }
 
-  private async search(term: string, word: string): Promise<ImageCandidate[]> {
+  private async search(term: string, word: string, perPage = this.resultsPerSearch): Promise<ImageCandidate[]> {
     const params = new HttpParams()
-      .set('per_page', this.resultsPerSearch)
+      .set('per_page', perPage)
       .set('content_filter', 'medium')
       .set('q', term)
-      .set('fields', 'title,file.hd.webp');
+      .set('fields', 'title,file.hd.webp,file.sm.webp');
 
     try {
       const response = await firstValueFrom(this.http.get<KlipyResponse>(
@@ -55,7 +63,10 @@ export class KlipyService {
       ).pipe(timeout(this.requestTimeoutMs)));
 
       return (response.data?.data ?? [])
-        .map(item => ({ title: item.title ?? '', url: this.findImageUrl(item.file) ?? '' }))
+        .map(item => {
+          const url = this.findImageUrl(item.file) ?? '';
+          return { title: item.title ?? '', url, previewUrl: this.findImageUrl(item.file?.sm) ?? url };
+        })
         .filter(candidate => candidate.url);
     } catch (error) {
       console.warn(`No se pudo buscar la imagen de "${word}" (${term})`, error);
@@ -107,6 +118,6 @@ export class KlipyService {
 // Solo los campos pedidos en `fields`.
 interface KlipyResponse {
   data?: {
-    data?: Array<{ title?: string; file?: unknown }>;
+    data?: Array<{ title?: string; file?: { sm?: unknown } }>;
   };
 }

@@ -48,6 +48,8 @@ import { AppUpdateService } from 'src/app/services/app-update';
 import {
   EnglishLevel, englishLevels, englishLevelLabel, loadEnglishLevel, saveEnglishLevel
 } from 'src/app/services/english-level';
+import { describeRequestError } from 'src/app/services/request-error';
+import { ToastService } from 'src/app/services/toast';
 
 interface Topic {
   id: string;
@@ -78,12 +80,11 @@ interface Topic {
 export class StudySetupPage implements OnInit {
   topics: Topic[] = [];
   loadingTopics = true;
-  topicsError = false;
+  // Qué puede hacer el usuario (ver describeRequestError); null si no hubo error. Los demás errores van en un toast.
+  topicsError: string | null = null;
   loadingMoreTopics = false;
-  moreTopicsError = false;
   // Qué se está preparando: practicar el tema o pedir palabras nuevas.
   loadingCards: 'practice' | 'new-words' | null = null;
-  cardsError = false;
   topicMenuOpen = false;
   menuTopic: Topic | null = null;
   private topicPressTimer?: ReturnType<typeof setTimeout>;
@@ -99,7 +100,8 @@ export class StudySetupPage implements OnInit {
     private router: Router,
     private flashcardService: FlashcardService,
     private alertController: AlertController,
-    private appUpdate: AppUpdateService
+    private appUpdate: AppUpdateService,
+    private toast: ToastService
   ) {
     addIcons({
       bookOutline, checkmarkCircle, bookmarkOutline, sparklesOutline,
@@ -145,20 +147,19 @@ export class StudySetupPage implements OnInit {
   async ngOnInit() {
     try {
       const result: TopicResult = await this.flashcardService.getTopics();
-      if (result.topics.length) {
-        this.topics = result.topics.map(label => ({
-          id: toTopicKey(label),
-          label,
-          icon: this.pickIcon(label),
-          fromLocal: result.fromLocal
-        }));
-        await this.refreshProgress();
-      } else {
-        this.topicsError = true;
+      if (!result.topics.length) {
+        throw new Error('Gemini no devolvio temas');
       }
+      this.topics = result.topics.map(label => ({
+        id: toTopicKey(label),
+        label,
+        icon: this.pickIcon(label),
+        fromLocal: result.fromLocal
+      }));
+      await this.refreshProgress();
     } catch (error) {
       console.error('No se pudieron cargar los temas de Gemini', error);
-      this.topicsError = true;
+      this.topicsError = describeRequestError(error);
     } finally {
       this.loadingTopics = false;
     }
@@ -288,7 +289,7 @@ export class StudySetupPage implements OnInit {
       }
       if (this.topics.length === 0) {
         this.loadingTopics = true;
-        this.topicsError = false;
+        this.topicsError = null;
         try {
           await this.loadMoreTopics();
         } finally {
@@ -324,7 +325,6 @@ export class StudySetupPage implements OnInit {
     if (this.loadingMoreTopics) return;
 
     this.loadingMoreTopics = true;
-    this.moreTopicsError = false;
 
     try {
       const labels = await this.flashcardService.getMoreTopics(this.topics.map(topic => topic.label));
@@ -342,7 +342,7 @@ export class StudySetupPage implements OnInit {
       }
     } catch (error) {
       console.error('No se pudieron cargar más temas de Gemini', error);
-      this.moreTopicsError = true;
+      this.showRequestError('No se pudieron cargar más temas.', error);
     } finally {
       this.loadingMoreTopics = false;
     }
@@ -372,7 +372,6 @@ export class StudySetupPage implements OnInit {
     if (!topic || this.loadingCards) return;
 
     this.loadingCards = mode;
-    this.cardsError = false;
 
     try {
       const cards = await load(topic.label);
@@ -384,10 +383,15 @@ export class StudySetupPage implements OnInit {
       await this.router.navigate(['/flashcards'], { state: { topic: topic.label, cards } });
     } catch (error) {
       console.error('No se pudieron generar las tarjetas', error);
-      this.cardsError = true;
+      this.showRequestError('No se pudieron generar las tarjetas.', error);
     } finally {
       this.loadingCards = null;
     }
+  }
+
+  // Más largo que el toast por defecto: son dos frases.
+  private showRequestError(message: string, error: unknown) {
+    this.toast.show(`${message} ${describeRequestError(error)}`, { color: 'danger', duration: 5000 });
   }
 
 }
