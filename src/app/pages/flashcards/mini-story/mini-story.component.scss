@@ -1,5 +1,5 @@
 ion-content {
-  --background: #eef1f6;
+  --background: var(--app-bg-sunken);
 }
 
 .story-loading {
@@ -24,11 +24,11 @@ ion-content {
 
 .story {
   padding: 20px 18px;
-  border: 1px solid rgba(35, 42, 52, 0.06);
+  border: 1px solid var(--app-border-subtle);
   border-radius: 18px;
-  background: #ffffff;
-  box-shadow: 0 8px 20px rgba(35, 42, 52, 0.04);
-  color: #20242b;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-card);
+  color: var(--app-text);
 
   h2 {
     margin: 0 0 12px;
@@ -89,8 +89,8 @@ ion-content {
   margin-top: 16px;
   padding: 16px 18px;
   border-radius: 16px;
-  background: rgba(35, 42, 52, 0.04);
-  color: #4d5561;
+  background: rgba(var(--app-ink-rgb), 0.04);
+  color: var(--app-text-body);
 
   p {
     margin: 0;

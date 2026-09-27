@@ -1,2 +1,141 @@
-// For information on how to create your own theme, please refer to:
-// https://ionicframework.com/docs/theming/
+// Tema de la app: paleta, roles y tipografía. Los estilos de los componentes solo usan estas variables, nunca colores
+// escritos a mano. Más en https://ionicframework.com/docs/theming/
+:root {
+  // Tipografía (las fuentes se cargan en global.scss). Bricolage Grotesque, con carácter, para títulos, palabras y
+  // cifras; Figtree, más neutra, para el resto de la interfaz.
+  --app-font-display: 'Bricolage Grotesque Variable', system-ui, sans-serif;
+  --ion-font-family: 'Figtree Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  // ---- Paleta ----
+
+  // Cobalto, la marca. De claro a oscuro: también es la escala de los gráficos.
+  --app-blue-100: #dce4fd;
+  --app-blue-300: #8ea7f6;
+  --app-blue-500: #3a60e6;
+  --app-blue-600: #2447d8;
+  --app-blue-700: #1d38b0;
+  --app-blue-900: #15235c;
+
+  // Tinta: grises con un punto de azul, para que casen con el cobalto.
+  --app-white: #ffffff;
+  --app-white-rgb: 255, 255, 255;
+  --app-ink-25: #f5f7fb;
+  --app-ink-50: #edf1f7;
+  --app-ink-100: #e3e8f0;
+  --app-ink-300: #a9b2c3;
+  --app-ink-400: #8a94a8;
+  --app-ink-500: #5f6a80;
+  --app-ink-600: #4f5a6e;
+  --app-ink-700: #343d52;
+  --app-ink-900: #161c2e;
+  // La de ink-900: sombras, bordes y velos translúcidos.
+  --app-ink-rgb: 22, 28, 46;
+
+  // Ámbar: ayudas (trucos para recordar) y palabras aprendidas.
+  --app-amber-50: #fff7e0;
+  --app-amber-400: #f5a300;
+  --app-amber-rgb: 245, 163, 0;
+  --app-amber-600: #c98a00;
+  --app-amber-700: #9a6700;
+  --app-amber-900: #4a3b12;
+
+  // Naranja: la racha.
+  --app-orange-50: #fff0e4;
+  --app-orange-500: #e9600e;
+  --app-orange-700: #b8470a;
+
+  // ---- Roles ----
+
+  --app-bg: var(--app-ink-25);
+  // Fondo de la práctica y de los huecos sin imagen.
+  --app-bg-sunken: var(--app-ink-50);
+  // Tarjetas, paneles y barras.
+  --app-surface: var(--app-white);
+  --app-surface-rgb: var(--app-white-rgb);
+  // Pistas de progreso, imágenes que faltan, botón inactivo.
+  --app-fill: var(--app-ink-100);
+  --app-divider: var(--app-ink-50);
+
+  --app-text: var(--app-ink-900);
+  --app-text-heading: var(--app-ink-700);
+  --app-text-body: var(--app-ink-600);
+  --app-text-muted: var(--app-ink-500);
+  --app-text-faint: var(--app-ink-400);
+
+  --app-border-subtle: rgba(var(--app-ink-rgb), 0.06);
+  --app-border: rgba(var(--app-ink-rgb), 0.08);
+  --app-border-strong: rgba(var(--app-ink-rgb), 0.16);
+  // Bajo el texto que va sobre una imagen.
+  --app-scrim: rgba(var(--app-ink-rgb), 0.78);
+
+  // Fondo de iconos y botones tonales; borde de los contorneados.
+  --app-primary-soft: rgba(var(--ion-color-primary-rgb), 0.1);
+  --app-primary-outline: rgba(var(--ion-color-primary-rgb), 0.35);
+
+  --app-shadow-card: 0 8px 20px rgba(var(--app-ink-rgb), 0.04);
+  --app-shadow-control: 0 8px 20px rgba(var(--app-ink-rgb), 0.06);
+  --app-shadow-tile: 0 10px 24px rgba(var(--app-ink-rgb), 0.1);
+  --app-shadow-float: 0 20px 44px rgba(var(--app-ink-rgb), 0.14);
+  --app-shadow-primary: 0 12px 26px rgba(var(--ion-color-primary-rgb), 0.28);
+
+  // Etapas de una palabra (Progreso y lista de palabras), de claro a oscuro.
+  --app-stage-new: var(--app-blue-300);
+  --app-stage-learning: var(--app-blue-500);
+  --app-stage-consolidating: var(--app-blue-700);
+  --app-stage-learned: var(--app-blue-900);
+
+  // ---- Ionic ----
+  // -rgb, -shade (12 % más oscuro) y -tint (10 % más claro) van calculados: Ionic los necesita en literal.
+
+  --ion-text-color: var(--app-text);
+  --ion-text-color-rgb: var(--app-ink-rgb);
+
+  --ion-color-primary: var(--app-blue-600);
+  --ion-color-primary-rgb: 36, 71, 216;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #203ebe;
+  --ion-color-primary-tint: #3a59dc;
+
+  --ion-color-success: #16884a;
+  --ion-color-success-rgb: 22, 136, 74;
+  --ion-color-success-contrast: #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #137841;
+  --ion-color-success-tint: #2d945c;
+
+  --ion-color-warning: var(--app-amber-400);
+  --ion-color-warning-rgb: 245, 163, 0;
+  --ion-color-warning-contrast: var(--app-ink-900);
+  --ion-color-warning-contrast-rgb: 22, 28, 46;
+  --ion-color-warning-shade: #d88f00;
+  --ion-color-warning-tint: #f6ac1a;
+
+  --ion-color-danger: #d63440;
+  --ion-color-danger-rgb: 214, 52, 64;
+  --ion-color-danger-contrast: #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #bc2e38;
+  --ion-color-danger-tint: #da4853;
+
+  --ion-color-light: var(--app-ink-50);
+  --ion-color-light-rgb: 237, 241, 247;
+  --ion-color-light-contrast: var(--app-ink-900);
+  --ion-color-light-contrast-rgb: 22, 28, 46;
+  --ion-color-light-shade: #d1d4d9;
+  --ion-color-light-tint: #eff2f8;
+
+  --ion-color-medium: var(--app-ink-500);
+  --ion-color-medium-rgb: 95, 106, 128;
+  --ion-color-medium-contrast: #ffffff;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: #545d71;
+  --ion-color-medium-tint: #6f798d;
+
+  --ion-color-dark: var(--app-ink-900);
+  --ion-color-dark-rgb: 22, 28, 46;
+  --ion-color-dark-contrast: #ffffff;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #131928;
+  --ion-color-dark-tint: #2d3343;
+}

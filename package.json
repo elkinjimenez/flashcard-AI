@@ -1,8 +1,13 @@
 {
   "name": "flashcards-ai",
   "version": "0.0.1",
-  "author": "Ionic Framework",
-  "homepage": "https://ionicframework.com/",
+  "description": "Aprende palabras con flashcards generadas por IA.",
+  "author": "Elkin Omar Jimenez Garcia",
+  "homepage": "https://elkinjimenez.github.io/flashcard-AI/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/elkinjimenez/flashcard-AI.git"
+  },
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -27,6 +32,8 @@
     "@capacitor/haptics": "8.0.2",
     "@capacitor/keyboard": "8.0.5",
     "@capacitor/status-bar": "8.0.2",
+    "@fontsource-variable/bricolage-grotesque": "^5.3.0",
+    "@fontsource-variable/figtree": "^5.3.0",
     "@ionic/angular": "^8.0.0",
     "ionicons": "^7.0.0",
     "rxjs": "~7.8.0",
@@ -61,6 +68,5 @@
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "typescript": "~5.9.0"
-  },
-  "description": "An Ionic project"
+  }
 }

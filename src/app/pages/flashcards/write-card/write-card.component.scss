@@ -19,11 +19,11 @@
   height: 58px;
   box-sizing: border-box;
   padding: 0 16px;
-  border: 2px solid rgba(35, 42, 52, 0.12);
+  border: 2px solid var(--app-border-strong);
   border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 8px 20px rgba(35, 42, 52, 0.06);
-  color: #20242b;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-control);
+  color: var(--app-text);
   font: inherit;
   // 16 px o más: con menos, Safari hace zoom al enfocar.
   font-size: 1.2rem;
@@ -52,7 +52,7 @@
   border-radius: 16px;
   background: var(--ion-color-primary);
   box-shadow: 0 10px 22px rgba(var(--ion-color-primary-rgb), 0.28);
-  color: #ffffff;
+  color: var(--ion-color-primary-contrast);
   cursor: pointer;
   appearance: none;
   transition: transform 0.15s ease, opacity 0.2s ease;

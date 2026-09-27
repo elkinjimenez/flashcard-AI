@@ -7,7 +7,7 @@
 }
 
 .exercise-instruction {
-  color: #6f7784;
+  color: var(--app-text-muted);
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -31,7 +31,7 @@
   flex-shrink: 0;
   width: 44px;
   height: 44px;
-  --background: rgba(var(--ion-color-primary-rgb), 0.1);
+  --background: var(--app-primary-soft);
   --border-radius: 50%;
   --color: var(--ion-color-primary);
   --padding-start: 0;
@@ -43,10 +43,10 @@
   height: clamp(200px, 34vh, 280px);
   box-sizing: border-box;
   padding: 10px;
-  border: 1px solid rgba(35, 42, 52, 0.08);
+  border: 1px solid var(--app-border);
   border-radius: 22px;
-  background: #ffffff;
-  box-shadow: 0 20px 44px rgba(35, 42, 52, 0.14);
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-float);
 
   img {
     width: 100%;
@@ -70,8 +70,8 @@
   gap: 8px;
   height: 100%;
   border-radius: 16px;
-  background: #eef1f6;
-  color: #8a929e;
+  background: var(--app-bg-sunken);
+  color: var(--app-text-faint);
   font-size: 0.78rem;
   font-weight: 600;
 
@@ -85,7 +85,7 @@
   min-height: 2.6em;
   max-width: 300px;
   margin: 0;
-  color: #69717d;
+  color: var(--app-text-muted);
   font-size: 0.9rem;
   font-weight: 600;
   line-height: 1.4;
@@ -119,7 +119,8 @@
     gap: 6px;
 
     strong {
-      color: #20242b;
+      color: var(--app-text);
+      font-family: var(--app-font-display);
       font-size: clamp(1.8rem, 8vw, 2.3rem);
       font-weight: 800;
       line-height: 1.1;
@@ -129,7 +130,7 @@
 
   // Lo que se dijo o escribió, si no era la palabra exacta.
   .result-note {
-    color: #69717d;
+    color: var(--app-text-muted);
     font-size: 0.85rem;
     font-weight: 600;
   }

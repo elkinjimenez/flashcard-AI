@@ -1,5 +1,5 @@
 .home-content {
-  --background: #f4f5f7;
+  --background: var(--app-bg);
 }
 
 .home-shell {
@@ -16,7 +16,7 @@
   height: 48px;
   border-radius: 16px;
   background: var(--ion-color-primary);
-  color: #ffffff;
+  color: var(--ion-color-primary-contrast);
   box-shadow: 0 10px 24px rgba(var(--ion-color-primary-rgb), 0.24);
 
   ion-icon {
@@ -35,7 +35,7 @@
 
 h1 {
   margin: 0;
-  color: #20242b;
+  color: var(--app-text);
   font-size: clamp(2.35rem, 10vw, 3.5rem);
   font-weight: 800;
   letter-spacing: -0.04em;
@@ -50,7 +50,7 @@ h1 {
 .intro {
   max-width: 290px;
   margin: 20px 0 36px;
-  color: #69717d;
+  color: var(--app-text-muted);
   font-size: 1.05rem;
   line-height: 1.5;
 }
@@ -62,10 +62,10 @@ h1 {
   max-width: 300px;
   margin: auto auto 28px;
   padding: 24px;
-  border: 1px solid rgba(35, 42, 52, 0.08);
+  border: 1px solid var(--app-border);
   border-radius: 16px;
-  background: #ffffff;
-  box-shadow: 0 18px 45px rgba(35, 42, 52, 0.09);
+  background: var(--app-surface);
+  box-shadow: 0 18px 45px rgba(var(--app-ink-rgb), 0.09);
   transform: rotate(-2deg);
 
   .preview-label {
@@ -76,19 +76,20 @@ h1 {
   }
 
   strong {
-    color: #20242b;
+    color: var(--app-text);
+    font-family: var(--app-font-display);
     font-size: 2rem;
   }
 
   span:last-child {
-    color: #7a818c;
+    color: var(--app-text-muted);
   }
 }
 
 .practice-button {
   --background: var(--ion-color-primary);
   --border-radius: 16px;
-  --box-shadow: 0 12px 26px rgba(var(--ion-color-primary-rgb), 0.28);
-  --color: #ffffff;
+  --box-shadow: var(--app-shadow-primary);
+  --color: var(--ion-color-primary-contrast);
   font-weight: 700;
 }

@@ -25,6 +25,18 @@
 @import "@ionic/angular/css/text-transformation.css";
 @import "@ionic/angular/css/flex-utils.css";
 
+/* Tipografía del tema (ver theme/variables.scss): va con la app, así funciona sin conexión. Bricolage con su eje de
+   tamaño óptico: se ajusta sola a títulos grandes y a textos pequeños. */
+@import "@fontsource-variable/bricolage-grotesque/opsz.css";
+@import "@fontsource-variable/figtree/index.css";
+
+h1,
+h2,
+h3,
+ion-title {
+  font-family: var(--app-font-display);
+}
+
 /* Botón destructivo de los ion-alert (p. ej. Eliminar tema): en rojo, como en la hoja de acciones. */
 ion-alert .alert-button-danger {
   color: var(--ion-color-danger);
@@ -32,7 +44,7 @@ ion-alert .alert-button-danger {
 
 /* Barra de pestañas flotante (ver tabs.page.scss): medidas que comparte con el contenido que pasa por detrás. */
 :root {
-  --glass-rgb: 255, 255, 255;
+  --glass-rgb: var(--app-surface-rgb);
   --tab-bar-height: 56px;
   /* Por encima del indicador de inicio de iOS; max() evita valores negativos sin área segura. */
   --tab-bar-bottom: max(8px, calc(var(--ion-safe-area-bottom, 0px) - 14px));
@@ -70,7 +82,7 @@ body {
 
 .page-title {
   margin: 0;
-  color: #20242b;
+  color: var(--app-text);
   font-size: clamp(2rem, 8vw, 2.8rem);
   font-weight: 800;
   letter-spacing: -0.04em;
@@ -79,7 +91,7 @@ body {
 
 .page-intro {
   margin: 14px 0 0;
-  color: #69717d;
+  color: var(--app-text-muted);
   font-size: 0.98rem;
   line-height: 1.5;
 }

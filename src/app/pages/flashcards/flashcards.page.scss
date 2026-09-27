@@ -14,7 +14,7 @@
 }
 
 ion-content {
-  --background: #eef1f6;
+  --background: var(--app-bg-sunken);
   --padding-bottom: 28px;
 
   &::part(scroll) {
@@ -24,15 +24,15 @@ ion-content {
 }
 
 ion-toolbar {
-  --background: #ffffff;
-  --color: #303640;
+  --background: var(--app-surface);
+  --color: var(--app-text-heading);
   --min-height: 62px;
   --padding-end: 14px;
   --padding-start: 4px;
 }
 
 .toolbar-button {
-  --color: #303640;
+  --color: var(--app-text-heading);
   --padding-start: 8px;
   --padding-end: 8px;
   font-size: 1.2rem;
@@ -64,21 +64,21 @@ ion-toolbar {
 .progress-count {
   padding: 5px 9px;
   border-radius: 999px;
-  background: #eef1f6;
-  color: #303640;
+  background: var(--app-bg-sunken);
+  color: var(--app-text-heading);
   font-size: 0.74rem;
   font-weight: 700;
 }
 
 .progress-area {
   padding: 0 18px 9px;
-  background: #ffffff;
+  background: var(--app-surface);
 }
 
 .progress-area ion-progress-bar {
   height: 6px;
   border-radius: 999px;
-  --background: #e7ebf2;
+  --background: var(--app-fill);
   --progress-background: var(--ion-color-primary);
 }
 
@@ -180,23 +180,23 @@ ion-toolbar {
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(255, 59, 48, 0.95) 60%, rgba(230, 46, 36, 0.95) 100%);
-    border: 3px solid #ffffff;
+    background: radial-gradient(circle, rgba(var(--ion-color-danger-rgb), 0.95) 60%, var(--ion-color-danger-shade) 100%);
+    border: 3px solid var(--ion-color-danger-contrast);
     box-shadow:
-      0 4px 12px rgba(255, 59, 48, 0.3),
-      0 12px 32px rgba(255, 59, 48, 0.5);
+      0 4px 12px rgba(var(--ion-color-danger-rgb), 0.3),
+      0 12px 32px rgba(var(--ion-color-danger-rgb), 0.5);
     flex-direction: column;
     gap: 2px;
 
     .seal-stamp {
-      color: #ffffff;
+      color: var(--ion-color-danger-contrast);
       font-size: 0.72rem;
       font-weight: 800;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       text-align: center;
       line-height: 1.1;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      text-shadow: 0 1px 2px rgba(var(--app-ink-rgb), 0.2);
     }
   }
 
@@ -206,23 +206,23 @@ ion-toolbar {
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(52, 199, 89, 0.95) 60%, rgba(45, 184, 78, 0.95) 100%);
-    border: 3px solid #ffffff;
+    background: radial-gradient(circle, rgba(var(--ion-color-success-rgb), 0.95) 60%, var(--ion-color-success-shade) 100%);
+    border: 3px solid var(--ion-color-success-contrast);
     box-shadow:
-      0 4px 12px rgba(52, 199, 89, 0.3),
-      0 12px 32px rgba(52, 199, 89, 0.5);
+      0 4px 12px rgba(var(--ion-color-success-rgb), 0.3),
+      0 12px 32px rgba(var(--ion-color-success-rgb), 0.5);
     flex-direction: column;
     gap: 2px;
 
     .seal-stamp {
-      color: #ffffff;
+      color: var(--ion-color-success-contrast);
       font-size: 0.72rem;
       font-weight: 800;
       letter-spacing: 0.06em;
       text-transform: uppercase;
       text-align: center;
       line-height: 1.1;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+      text-shadow: 0 1px 2px rgba(var(--app-ink-rgb), 0.2);
     }
   }
 
@@ -296,9 +296,9 @@ ion-toolbar {
   height: 100%;
   box-sizing: border-box;
   backface-visibility: hidden;
-  border: 1px solid rgba(35, 42, 52, 0.08);
+  border: 1px solid var(--app-border);
   border-radius: 22px;
-  box-shadow: 0 20px 44px rgba(35, 42, 52, 0.14);
+  box-shadow: var(--app-shadow-float);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -308,7 +308,7 @@ ion-toolbar {
 
 .card-front {
   justify-content: flex-end;
-  background: #ffffff;
+  background: var(--app-surface);
 
   .image-stage {
     position: relative;
@@ -335,7 +335,7 @@ ion-toolbar {
 
   .image-loading {
     position: absolute;
-    color: #8a929e;
+    color: var(--app-text-faint);
     font-size: 0.78rem;
     font-weight: 600;
   }
@@ -349,8 +349,8 @@ ion-toolbar {
     width: 100%;
     height: 100%;
     border-radius: 16px;
-    background: #eef1f6;
-    color: #8a929e;
+    background: var(--app-bg-sunken);
+    color: var(--app-text-faint);
     font-size: 0.78rem;
     font-weight: 600;
 
@@ -360,7 +360,8 @@ ion-toolbar {
   }
 
   .word-label {
-    color: #20242b;
+    color: var(--app-text);
+    font-family: var(--app-font-display);
     font-size: clamp(1.35rem, 5vw, 1.65rem);
     font-weight: 700;
     padding: 12px 18px 20px;
@@ -368,7 +369,7 @@ ion-toolbar {
 
   .front-prompt {
     padding: 18px 18px 26px;
-    color: #8a929e;
+    color: var(--app-text-faint);
     font-size: 0.95rem;
     font-weight: 700;
   }
@@ -380,14 +381,14 @@ ion-toolbar {
   width: 100%;
   height: 100%;
   background: var(--ion-color-primary);
-  color: white;
+  color: var(--ion-color-primary-contrast);
   transform: rotateY(180deg);
   gap: 10px;
 
   .back-type {
     position: absolute;
     top: 22px;
-    color: rgba(255, 255, 255, 0.72);
+    color: rgba(var(--ion-color-primary-contrast-rgb), 0.72);
     font-size: 0.68rem;
     font-weight: 800;
     letter-spacing: 0.14em;
@@ -396,6 +397,7 @@ ion-toolbar {
 
   .word-en {
     max-width: 90%;
+    font-family: var(--app-font-display);
     font-size: clamp(1.8rem, 8vw, 2.5rem);
     font-weight: 800;
     line-height: 1.08;
@@ -406,9 +408,9 @@ ion-toolbar {
     width: 56px;
     height: 56px;
     margin-top: 4px;
-    --background: rgba(255, 255, 255, 0.16);
+    --background: rgba(var(--ion-color-primary-contrast-rgb), 0.16);
     --border-radius: 50%;
-    --color: #ffffff;
+    --color: var(--ion-color-primary-contrast);
     --padding-start: 0;
     --padding-end: 0;
     font-size: 1.3rem;
@@ -419,15 +421,15 @@ ion-toolbar {
     margin: 8px 0 0;
     padding: 12px 16px;
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.86);
+    background: rgba(var(--ion-color-primary-contrast-rgb), 0.12);
+    color: rgba(var(--ion-color-primary-contrast-rgb), 0.86);
     font-size: 1rem;
     font-weight: 500;
     line-height: 1.45;
     text-align: center;
 
     strong {
-      color: #ffffff;
+      color: var(--ion-color-primary-contrast);
       font-weight: 800;
     }
   }
@@ -440,10 +442,10 @@ ion-toolbar {
     gap: 6px;
     max-width: 86%;
     padding: 8px 14px;
-    border: 1px solid rgba(255, 255, 255, 0.32);
+    border: 1px solid rgba(var(--ion-color-primary-contrast-rgb), 0.32);
     border-radius: 999px;
     background: transparent;
-    color: rgba(255, 255, 255, 0.78);
+    color: rgba(var(--ion-color-primary-contrast-rgb), 0.78);
     font: inherit;
     font-size: 0.8rem;
     font-weight: 700;
@@ -451,12 +453,12 @@ ion-toolbar {
 
     &.revealed {
       border-color: transparent;
-      background: #ffffff;
+      background: var(--app-surface);
       color: var(--ion-color-primary);
     }
 
     &:focus-visible {
-      outline: 2px solid #ffffff;
+      outline: 2px solid var(--ion-color-primary-contrast);
       outline-offset: 2px;
     }
 
@@ -473,7 +475,7 @@ ion-toolbar {
   justify-content: center;
   gap: 10px;
   margin: 16px auto 0;
-  color: #6f7784;
+  color: var(--app-text-muted);
   font-size: 0.76rem;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -483,7 +485,7 @@ ion-toolbar {
 .hint-line {
   width: 24px;
   height: 1px;
-  background: rgba(111, 119, 132, 0.3);
+  background: var(--app-border-strong);
 }
 
 // Truco para recordar una palabra que cuesta, tras fallarla. Ámbar: ayuda, no error.
@@ -495,16 +497,16 @@ ion-toolbar {
   box-sizing: border-box;
   margin: 16px auto 0;
   padding: 12px 14px;
-  border: 1px solid rgba(217, 154, 0, 0.3);
+  border: 1px solid rgba(var(--app-amber-rgb), 0.3);
   border-radius: 16px;
-  background: #fff7e0;
-  color: #4a3b12;
+  background: var(--app-amber-50);
+  color: var(--app-amber-900);
   animation: mnemonic-in 0.3s ease-out;
 
   ion-icon {
     flex-shrink: 0;
     margin-top: 1px;
-    color: #c98a00;
+    color: var(--app-amber-600);
     font-size: 1.3rem;
   }
 
@@ -518,7 +520,7 @@ ion-toolbar {
 .mnemonic-label {
   display: block;
   margin-bottom: 2px;
-  color: #8a5d00;
+  color: var(--app-amber-700);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.1em;
