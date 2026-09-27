@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButtons,
-  IonButton, IonIcon, IonProgressBar, IonSpinner, ToastController
+  IonButton, IonIcon, IonProgressBar, IonSpinner
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -16,6 +16,7 @@ import { QuizCardComponent, QuizKind } from './quiz-card/quiz-card.component';
 import { SpeakCardComponent, SpeechUnavailableReason } from './speak-card/speak-card.component';
 import { SpeechRecognitionService } from 'src/app/services/speech-recognition';
 import { wordPattern } from 'src/app/services/word-forms';
+import { ToastService } from 'src/app/services/toast';
 
 // speak: ver la imagen y decir la palabra en voz alta.
 type ExerciseKind = 'card' | QuizKind | 'speak';
@@ -114,7 +115,7 @@ export class FlashcardsPage {
   constructor(
     private router: Router,
     private flashcardService: FlashcardService,
-    private toastController: ToastController,
+    private toast: ToastService,
     private speech: SpeechRecognitionService
   ) {
     addIcons({
@@ -482,14 +483,8 @@ export class FlashcardsPage {
     return this.showToast(message, 'danger');
   }
 
-  private async showToast(message: string, color: 'danger' | 'dark') {
-    const toast = await this.toastController.create({
-      message,
-      duration: 3000,
-      position: 'top',
-      color
-    });
-    await toast.present();
+  private showToast(message: string, color: 'danger' | 'dark') {
+    return this.toast.show(message, { color });
   }
 
   flip() {

@@ -39,10 +39,12 @@ import {
   schoolOutline,
   leafOutline,
   carOutline,
-  peopleOutline
+  peopleOutline,
+  refresh
 } from 'ionicons/icons';
 import { Flashcard, FlashcardService, TopicProgress, TopicResult } from 'src/app/services/flashcard';
 import { toTopicKey } from 'src/app/services/topic-key';
+import { AppUpdateService } from 'src/app/services/app-update';
 import {
   EnglishLevel, englishLevels, englishLevelLabel, loadEnglishLevel, saveEnglishLevel
 } from 'src/app/services/english-level';
@@ -96,7 +98,8 @@ export class StudySetupPage implements OnInit {
   constructor(
     private router: Router,
     private flashcardService: FlashcardService,
-    private alertController: AlertController
+    private alertController: AlertController,
+    private appUpdate: AppUpdateService
   ) {
     addIcons({
       bookOutline, checkmarkCircle, bookmarkOutline, sparklesOutline,
@@ -105,7 +108,7 @@ export class StudySetupPage implements OnInit {
       medkitOutline, barbellOutline, musicalNotesOutline, laptopOutline,
       homeOutline, shirtOutline, cloudOutline, cashOutline, colorPaletteOutline,
       flaskOutline, languageOutline, cartOutline, schoolOutline, leafOutline,
-      carOutline, peopleOutline
+      carOutline, peopleOutline, refresh
     });
   }
 
@@ -310,6 +313,11 @@ export class StudySetupPage implements OnInit {
     await alert.present();
     const { role } = await alert.onDidDismiss();
     return role === 'confirm';
+  }
+
+  // En la PWA instalada no hay botón de recargar del navegador. Si hay versión nueva, entra con ella.
+  reload() {
+    this.appUpdate.updateAndReload();
   }
 
   async loadMoreTopics() {

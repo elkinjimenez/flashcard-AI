@@ -28,9 +28,13 @@
     <span>Generando temas...</span>
   </div>
 
-  <p class="topics-error" *ngIf="!loadingTopics && topicsError" role="alert">
-    No se pudieron cargar los temas. Intenta recargar la pantalla.
-  </p>
+  <div class="topics-error" *ngIf="!loadingTopics && topicsError" role="alert">
+    <p>No se pudieron cargar los temas.</p>
+    <ion-button fill="outline" (click)="reload()">
+      <ion-icon slot="start" name="refresh"></ion-icon>
+      Recargar
+    </ion-button>
+  </div>
 
   <div class="topics-grid" *ngIf="!loadingTopics && !topicsError">
     <button type="button" *ngFor="let topic of topics" class="topic-card" [class.selected]="selectedTopic === topic.id"

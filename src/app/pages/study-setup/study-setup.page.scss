@@ -62,10 +62,13 @@ ion-content {
 
 .topics-error {
   min-height: 180px;
-  margin: 0;
   padding: 48px 24px;
   color: var(--ion-color-danger);
   text-align: center;
+
+  p {
+    margin: 0 0 16px;
+  }
 }
 
 .more-topics-btn {

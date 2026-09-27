@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { AppUpdateService } from './app-update';
 import { Flashcard } from './flashcard.model';
 import { toTopicKey } from './topic-key';
 
@@ -22,6 +23,9 @@ export interface StoredStudySet {
 export class StudySetRepository {
   private readonly databaseName = 'flashcards-ai';
   private readonly storeName = 'study-sets';
+  private switchingVersion = false;
+
+  constructor(private appUpdate: AppUpdateService) {}
 
   async get(topic: string): Promise<StoredStudySet | undefined> {
     const database = await this.openDatabase();
@@ -116,8 +120,23 @@ export class StudySetRepository {
           this.migrateToTopicKeys(request.transaction);
         }
       };
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const database = request.result;
+        // Otra pestaña abre la versión nueva: cerrar para no bloquear su actualización del esquema.
+        database.onversionchange = () => {
+          database.close();
+          location.reload();
+        };
+        resolve(database);
+      };
+      request.onerror = () => {
+        // Una versión más nueva de la app ya subió el esquema: esta ventana es vieja.
+        if (request.error?.name === 'VersionError' && !this.switchingVersion) {
+          this.switchingVersion = true;
+          this.appUpdate.switchToNewVersion();
+        }
+        reject(request.error);
+      };
     });
   }
 
