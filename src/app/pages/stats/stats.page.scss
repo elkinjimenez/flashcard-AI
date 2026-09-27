@@ -360,6 +360,20 @@ ion-content {
   font-weight: 700;
 }
 
+// Como el de la palabra del día, algo más pequeño para que quepa en la fila.
+.speak-button {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  --background: rgba(var(--ion-color-primary-rgb), 0.1);
+  --border-radius: 50%;
+  --color: var(--ion-color-primary);
+  --padding-start: 0;
+  --padding-end: 0;
+  font-size: 0.9rem;
+}
+
 // Truco para recordarla, bajo la palabra y alineado con su texto. Ámbar como en la práctica: ayuda, no error.
 .hard-mnemonic,
 .create-mnemonic {

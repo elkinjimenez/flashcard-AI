@@ -7,7 +7,6 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { arrowForwardOutline, sparklesOutline } from 'ionicons/icons';
-import { pickWordOfTheDay } from './word-of-the-day';
 import { markWelcomeSeen } from './welcome';
 
 // Bienvenida: solo sale la primera vez (ver welcomeGuard).
@@ -20,7 +19,8 @@ import { markWelcomeSeen } from './welcome';
 export class HomePage {
   private router = inject(Router);
 
-  readonly wordOfTheDay = pickWordOfTheDay();
+  // Solo de muestra: aún no tiene palabras suyas (en Hoy, la palabra del día sale de las que le cuestan).
+  readonly sampleWord = { word: 'lighthouse', translation: 'faro' };
 
   constructor() {
     addIcons({ arrowForwardOutline, sparklesOutline });

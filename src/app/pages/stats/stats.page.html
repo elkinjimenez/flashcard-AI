@@ -120,10 +120,14 @@
                 <span class="hard-no-image"><ion-icon name="image-outline" aria-hidden="true"></ion-icon></span>
               </ng-template>
               <span class="hard-text">
-                <strong>{{ item.word }}</strong>
+                <strong lang="en">{{ item.word }}</strong>
                 <span>{{ item.translation }} · {{ item.topic }}</span>
               </span>
               <span class="hard-misses">{{ count(item.misses, 'fallo', 'fallos') }}</span>
+              <ion-button fill="clear" class="speak-button" [attr.aria-label]="'Escuchar ' + item.word"
+                title="Escuchar pronunciación" (click)="speak(item)">
+                <ion-icon slot="icon-only" name="volume-high-outline"></ion-icon>
+              </ion-button>
             </div>
             <p class="hard-mnemonic" *ngIf="item.mnemonic">
               <ion-icon name="bulb-outline" aria-hidden="true"></ion-icon>

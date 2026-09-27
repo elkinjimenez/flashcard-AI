@@ -11,7 +11,7 @@ import { loadEnglishLevel } from 'src/app/services/english-level';
 import { registerTopicIcons, topicIcon } from 'src/app/services/topic-icon';
 import { describeRequestError } from 'src/app/services/request-error';
 import { ToastService } from 'src/app/services/toast';
-import { pickWordOfTheDay } from 'src/app/home/word-of-the-day';
+import { DailyWord, pickWordOfTheDay } from './word-of-the-day';
 import { PronunciationService } from 'src/app/services/pronunciation';
 
 // Como mucho, los repasos de una sesión: igual que la sesión más larga que se puede elegir en Temas.
@@ -32,7 +32,8 @@ export class TodayPage {
   private toast = inject(ToastService);
   private pronunciation = inject(PronunciationService);
 
-  readonly wordOfTheDay = pickWordOfTheDay();
+  // Sale de las palabras que más le cuestan; sin ninguna, no se muestra.
+  wordOfTheDay: DailyWord | null = null;
   // "sábado, 27 de septiembre".
   readonly dateLabel = new Intl.DateTimeFormat('es', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
   stats: Stats | null = null;
@@ -84,7 +85,7 @@ export class TodayPage {
   }
 
   speakWordOfTheDay() {
-    this.pronunciation.speak(this.wordOfTheDay.word);
+    if (this.wordOfTheDay) this.pronunciation.speak(this.wordOfTheDay.word);
   }
 
   icon(topic: TopicStats): string {
@@ -120,6 +121,7 @@ export class TodayPage {
     this.loadingError = false;
     try {
       this.stats = await this.statsService.getStats();
+      this.wordOfTheDay = pickWordOfTheDay(this.stats.hardestWords);
     } catch (error) {
       console.error('No se pudieron cargar los repasos de hoy', error);
       this.loadingError = true;

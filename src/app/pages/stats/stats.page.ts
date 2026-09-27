@@ -6,11 +6,12 @@ import {
   IonContent, IonSpinner, IonIcon, IonButton
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { bulbOutline, chevronForward, imageOutline, statsChartOutline } from 'ionicons/icons';
+import { bulbOutline, chevronForward, imageOutline, statsChartOutline, volumeHighOutline } from 'ionicons/icons';
 import { DailyActivity } from 'src/app/services/study-set-repository';
 import { HardWord, Stats, StatsService, TopicStats, WordStage } from 'src/app/services/stats';
 import { FlashcardService } from 'src/app/services/flashcard';
 import { mnemonicMisses } from 'src/app/services/flashcard.model';
+import { PronunciationService } from 'src/app/services/pronunciation';
 import { describeRequestError } from 'src/app/services/request-error';
 import { toTopicKey } from 'src/app/services/topic-key';
 import { ToastService } from 'src/app/services/toast';
@@ -42,6 +43,7 @@ export class StatsPage {
   private statsService = inject(StatsService);
   private flashcardService = inject(FlashcardService);
   private toast = inject(ToastService);
+  private pronunciation = inject(PronunciationService);
 
   readonly stages = stages;
   readonly todayIndex = todayIndex;
@@ -55,8 +57,12 @@ export class StatsPage {
   creatingMnemonics = new Set<HardWord>();
 
   constructor() {
-    addIcons({ bulbOutline, chevronForward, imageOutline, statsChartOutline });
+    addIcons({ bulbOutline, chevronForward, imageOutline, statsChartOutline, volumeHighOutline });
     this.flashcardService.cardsChanged.pipe(takeUntilDestroyed()).subscribe(() => this.load());
+  }
+
+  speak(item: HardWord) {
+    this.pronunciation.speak(item.word);
   }
 
   // Normalmente se crea al fallarla en la práctica; las que ya costaban antes de existir el truco lo piden aquí.

@@ -46,10 +46,15 @@
       (pointerup)="cancelTopicPress()" (pointercancel)="cancelTopicPress()"
       (pointerleave)="cancelTopicPress()" (click)="selectTopic(topic.id)"
       (contextmenu)="openTopicMenu(topic, $event)" (keydown.shift.f10)="openTopicMenu(topic, $event)">
-      <ion-icon aria-hidden="true" [name]="selectedTopic === topic.id ? 'checkmark-circle' : topic.icon"></ion-icon>
-      <span>{{ topic.label }}</span>
+      <span class="topic-icon">
+        <ion-icon aria-hidden="true" [name]="selectedTopic === topic.id ? 'checkmark' : topic.icon"></ion-icon>
+      </span>
+      <span class="topic-label">{{ topic.label }}</span>
       <span class="topic-progress" *ngIf="topic.progress"
         [attr.title]="'Ya sabes ' + topic.progress.known + ' de ' + topic.progress.total + ' palabras'">
+        <span class="topic-progress-bar">
+          <span [style.width.%]="topic.progress.total ? topic.progress.known * 100 / topic.progress.total : 0"></span>
+        </span>
         {{ topic.progress.known }}/{{ topic.progress.total }}
       </span>
       <ion-icon class="topic-origin" [name]="topic.fromLocal ? 'bookmark-outline' : 'sparkles-outline'"
@@ -66,28 +71,31 @@
   </ion-button>
 
   <div class="bottom-section">
-    <h2 class="section-title">¿Cuántas palabras?</h2>
+    <div class="count-row">
+      <h2 class="section-title" id="count-title">¿Cuántas palabras?</h2>
 
-    <ion-segment class="card-count-segment" [(ngModel)]="cardCount" mode="ios"
-      [disabled]="loadingTopics || !!topicsError">
-      <ion-segment-button [value]="10">
-        <ion-label>10</ion-label>
-      </ion-segment-button>
-      <ion-segment-button [value]="15">
-        <ion-label>15</ion-label>
-      </ion-segment-button>
-      <ion-segment-button [value]="20">
-        <ion-label>20</ion-label>
-      </ion-segment-button>
-    </ion-segment>
+      <ion-segment class="card-count-segment" [(ngModel)]="cardCount" mode="ios" aria-labelledby="count-title"
+        [disabled]="loadingTopics || !!topicsError">
+        <ion-segment-button [value]="10">
+          <ion-label>10</ion-label>
+        </ion-segment-button>
+        <ion-segment-button [value]="15">
+          <ion-label>15</ion-label>
+        </ion-segment-button>
+        <ion-segment-button [value]="20">
+          <ion-label>20</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
 
     <div class="start-actions">
-      <ion-button expand="block" size="large" class="start-btn"
+      <!-- La flecha está siempre (salvo al cargar): al elegir tema solo cambia el color, sin mover el texto. -->
+      <ion-button expand="block" size="large" class="start-btn" [class.idle]="!selectedTopic || nothingToPractice"
         [disabled]="loadingTopics || !!topicsError || !!loadingCards || !selectedTopic || nothingToPractice"
         (click)="startStudy()">
         <ion-spinner *ngIf="loadingCards === 'practice'" name="crescent"></ion-spinner>
         {{ loadingCards === 'practice' ? (selectedSavedTopic ? 'Preparando...' : 'Generando tarjetas...') : 'Practicar' }}
-        <ion-icon *ngIf="selectedTopic && loadingCards !== 'practice'" slot="end" name="arrow-forward-outline"></ion-icon>
+        <ion-icon *ngIf="loadingCards !== 'practice'" slot="end" name="arrow-forward-outline" aria-hidden="true"></ion-icon>
       </ion-button>
 
       <!-- Solo en temas guardados: sus palabras, para corregirlas o quitar las que sobran. -->
@@ -105,7 +113,7 @@
         <ion-spinner *ngIf="loadingCards === 'new-words'" name="crescent"></ion-spinner>
         <ng-container *ngIf="loadingCards !== 'new-words'">
           <ion-icon slot="start" name="sparkles-outline" aria-hidden="true"></ion-icon>
-          +{{ cardCount }} nuevas
+          +{{ cardCount }}
         </ng-container>
       </ion-button>
     </div>

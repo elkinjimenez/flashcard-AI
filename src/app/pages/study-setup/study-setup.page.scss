@@ -5,7 +5,7 @@ ion-content {
   &::part(scroll) {
     display: flex;
     flex-direction: column;
-    padding-bottom: calc(150px + var(--tab-bar-space));
+    padding-bottom: calc(190px + var(--tab-bar-space));
   }
 }
 
@@ -44,13 +44,14 @@ ion-content {
 }
 
 .more-topics-btn {
-  margin-top: 16px;
-  margin-bottom: 104px;
-  --border-radius: 16px;
+  margin-top: 14px;
+  --border-radius: 18px;
+  --border-style: dashed;
+  --border-width: 1.5px;
   --border-color: rgba(var(--ion-color-primary-rgb), 0.35);
   --color: var(--ion-color-primary);
-  --background: rgba(255, 255, 255, 0.5);
-  font-weight: 600;
+  --background: transparent;
+  font-weight: 700;
 }
 
 .topic-card {
@@ -58,14 +59,14 @@ ion-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  min-height: 112px;
-  padding: 24px 12px 18px;
+  gap: 10px;
+  min-height: 124px;
+  padding: 18px 10px 14px;
   border: 1px solid rgba(35, 42, 52, 0.06);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.72);
+  border-radius: 18px;
+  background: #ffffff;
   box-shadow: 0 8px 20px rgba(35, 42, 52, 0.04);
-  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
   cursor: pointer;
   appearance: none;
   color: inherit;
@@ -76,59 +77,103 @@ ion-content {
     outline-offset: 2px;
   }
 
-  ion-icon {
-    font-size: 28px;
-    color: var(--ion-color-medium);
-  }
-
-  .topic-origin {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    margin: 8px;
-    font-size: 16px;
-    color: var(--ion-color-primary);
-  }
-
-  span {
-    max-width: 120px;
-    font-weight: 500;
-    line-height: 1.2;
-    text-align: center;
-  }
-
-  .topic-progress {
-    padding: 2px 8px;
-    border-radius: 999px;
-    background: rgba(var(--ion-color-primary-rgb), 0.1);
-    color: var(--ion-color-primary);
-    font-size: 0.72rem;
-    font-weight: 700;
+  @media (hover: hover) {
+    &:hover {
+      border-color: rgba(var(--ion-color-primary-rgb), 0.3);
+    }
   }
 
   &:active {
     transform: scale(0.96);
   }
 
-  &.saved {
-    border-color: rgba(var(--ion-color-primary-rgb), 0.5);
+  // Como el de los repasos de Hoy.
+  .topic-icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: rgba(var(--ion-color-primary-rgb), 0.1);
+    color: var(--ion-color-primary);
+    font-size: 1.35rem;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .topic-label {
+    max-width: 100%;
+    color: #20242b;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.2;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  // Al pie de la tarjeta, para que las de una misma fila queden alineadas.
+  .topic-progress {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    margin-top: auto;
+    color: #69717d;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .topic-progress-bar {
+    flex: 1;
+    height: 4px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: #e7ebf2;
+
+    span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--ion-color-primary);
+    }
+  }
+
+  .topic-origin {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 14px;
+    color: var(--ion-color-primary);
+  }
+
+  &.saved .topic-origin {
+    color: #9aa1ab;
   }
 
   &.selected {
     border-color: var(--ion-color-primary);
-    background: var(--ion-color-primary-tint);
-    box-shadow: 0 8px 20px rgba(var(--ion-color-primary-rgb), 0.16);
+    background: var(--ion-color-primary);
+    box-shadow: 0 12px 26px rgba(var(--ion-color-primary-rgb), 0.28);
 
-    ion-icon {
-      color: #fff;
+    .topic-icon {
+      background: #ffffff;
     }
 
-    span {
-      color: #fff;
+    .topic-label {
+      color: #ffffff;
     }
 
-    .topic-progress {
-      background: rgba(255, 255, 255, 0.22);
+    .topic-progress,
+    .topic-origin {
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .topic-progress-bar {
+      background: rgba(255, 255, 255, 0.3);
+
+      span {
+        background: #ffffff;
+      }
     }
   }
 }
@@ -140,9 +185,34 @@ ion-content {
   bottom: 0;
   left: 0;
   z-index: 10;
-  padding: 14px 16px calc(12px + var(--tab-bar-space));
-  background: rgba(244, 245, 247, 0.94);
-  box-shadow: 0 -10px 24px rgba(35, 42, 52, 0.06);
+  padding: 16px 16px calc(12px + var(--tab-bar-space));
+  border-top: 1px solid rgba(35, 42, 52, 0.06);
+  border-radius: 24px 24px 0 0;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 -12px 30px rgba(35, 42, 52, 0.08);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+// Título y cantidad en una fila: el panel ocupa menos y deja más sitio a los temas.
+.count-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .section-title {
+    flex: 1;
+    margin: 0;
+  }
+
+  // Sin el min-width de 70px de iOS: los tres botones no cabrían y el último se recortaría.
+  .card-count-segment {
+    flex: 0 0 min(180px, 55%);
+
+    ion-segment-button {
+      min-width: 0;
+    }
+  }
 }
 
 .section-hint {
@@ -176,13 +246,22 @@ ion-content {
 .start-actions {
   display: flex;
   gap: 10px;
-  margin-top: 20px;
+  margin-top: 14px;
+}
+
+// Altura fija para los tres: así el borde de los contorneados no la cambia al aparecer.
+.start-actions ion-button {
+  height: 56px;
+  min-height: 0;
+  margin: 0;
+  --padding-top: 0;
+  --padding-bottom: 0;
+  font-size: 1.05rem;
 }
 
 .words-btn,
 .new-words-btn {
   flex-shrink: 0;
-  margin: 0;
   --border-radius: 16px;
   --border-color: rgba(var(--ion-color-primary-rgb), 0.35);
   --border-width: 1.5px;
@@ -191,29 +270,53 @@ ion-content {
   font-weight: 700;
 }
 
+.words-btn {
+  width: 56px;
+  --padding-start: 0;
+  --padding-end: 0;
+}
+
 .start-btn {
   flex: 1;
   min-width: 0;
-  margin: 0;
   --background: var(--ion-color-primary);
   --border-radius: 16px;
   --box-shadow: 0 12px 26px rgba(var(--ion-color-primary-rgb), 0.28);
   --color: #ffffff;
+  --transition: background-color 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
   font-weight: 700;
 
-  ion-icon {
-    animation: arrow-appear 0.35s ease-out both;
+  // Mientras prepara la sesión también está deshabilitado: sigue azul, con su spinner, sin el desvaído de Ionic.
+  &.button-disabled {
+    opacity: 1;
+  }
+
+  // Sin tema elegido: gris. La sombra transparente (no none) deja que aparezca con transición.
+  &.idle {
+    --background: #e4e8ef;
+    --color: #8a929e;
+    --box-shadow: 0 12px 26px rgba(var(--ion-color-primary-rgb), 0);
+  }
+
+  // Al activarse, la flecha avanza y vuelve: invita a empezar.
+  @media (prefers-reduced-motion: no-preference) {
+    &:not(.idle) ion-icon {
+      animation: arrow-nudge 0.6s ease-in-out 0.15s;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    --transition: none;
   }
 }
 
-@keyframes arrow-appear {
-  from {
-    opacity: 0;
-    transform: translateX(-6px);
+@keyframes arrow-nudge {
+  0%,
+  100% {
+    transform: translateX(0);
   }
 
-  to {
-    opacity: 1;
-    transform: translateX(0);
+  45% {
+    transform: translateX(6px);
   }
 }

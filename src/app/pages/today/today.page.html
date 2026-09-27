@@ -41,7 +41,7 @@
     <ion-icon slot="end" name="arrow-forward-outline" aria-hidden="true"></ion-icon>
   </ion-button>
 
-  <section aria-labelledby="word-title">
+  <section *ngIf="wordOfTheDay" aria-labelledby="word-title">
     <h2 class="section-title" id="word-title">Palabra del día</h2>
     <div class="word-card">
       <div class="word-text">

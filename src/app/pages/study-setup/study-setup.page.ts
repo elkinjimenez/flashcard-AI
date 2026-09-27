@@ -16,7 +16,7 @@ import {
   AlertController
 } from '@ionic/angular/standalone';
 import {
-  checkmarkCircle,
+  checkmark,
   bookmarkOutline,
   sparklesOutline,
   arrowForwardOutline,
@@ -86,7 +86,7 @@ export class StudySetupPage implements OnInit {
   level: EnglishLevel = loadEnglishLevel();
 
   constructor() {
-    addIcons({ checkmarkCircle, bookmarkOutline, sparklesOutline, arrowForwardOutline, listOutline, refresh });
+    addIcons({ checkmark, bookmarkOutline, sparklesOutline, arrowForwardOutline, listOutline, refresh });
     registerTopicIcons();
     this.flashcardService.cardsChanged.pipe(takeUntilDestroyed()).subscribe(() => this.ionViewWillEnter());
   }
