@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { AppUpdateService } from './app-update';
-import { Flashcard } from './flashcard.model';
+import { Flashcard, learnedBox, reviewIntervalDays } from './flashcard.model';
 import { toTopicKey } from './topic-key';
 
 // Con qué forma de buscar imágenes se creó el tema. Solo informativo: las imágenes guardadas no se vuelven a buscar
@@ -10,7 +10,8 @@ const currentImageSearchVersion = 4;
 
 // 4: el id de cada tema pasa a ser su clave normalizada (antes era el texto tal cual).
 // 5: se añade la actividad diaria, para las estadísticas.
-const databaseVersion = 5;
+// 6: las aprendidas tienen repasos de mantenimiento; las de antes se programan (ver scheduleLearnedCards).
+const databaseVersion = 6;
 
 export interface StoredStudySet {
   id: string;
@@ -168,8 +169,8 @@ export class StudySetRepository {
         const database = request.result;
         if (!database.objectStoreNames.contains(this.storeName)) {
           database.createObjectStore(this.storeName, { keyPath: 'id' });
-        } else if (event.oldVersion < 4 && request.transaction) {
-          this.migrateToTopicKeys(request.transaction);
+        } else if (event.oldVersion < 6 && request.transaction) {
+          this.migrateStudySets(request.transaction, event.oldVersion);
         }
         if (!database.objectStoreNames.contains(this.activityStoreName)) {
           database.createObjectStore(this.activityStoreName, { keyPath: 'date' });
@@ -195,28 +196,63 @@ export class StudySetRepository {
     });
   }
 
-  // Reescribe los temas guardados con su clave normalizada; los que coinciden ("Comida" y "comida") se fusionan.
-  private migrateToTopicKeys(transaction: IDBTransaction) {
+  // Reescribe los temas guardados con los cambios de cada versión desde `oldVersion`. En una sola lectura: otra en la
+  // misma transacción leería los datos antes de que la primera los reescriba.
+  private migrateStudySets(transaction: IDBTransaction, oldVersion: number) {
     const store = transaction.objectStore(this.storeName);
     const request = store.getAll();
 
     request.onsuccess = () => {
       // Si algo falla se aborta la actualización y los datos se quedan como estaban.
       try {
-        const groups = new Map<string, StoredStudySet[]>();
-        for (const studySet of request.result as StoredStudySet[]) {
-          const id = this.getStudySetId(studySet.topic);
-          groups.set(id, [...(groups.get(id) ?? []), studySet]);
+        let studySets = request.result as StoredStudySet[];
+        if (oldVersion < 4) {
+          studySets = this.mergeByTopicKey(studySets);
         }
+        studySets = this.scheduleLearnedCards(studySets);
 
-        const migrated = [...groups].map(([id, studySets]) => this.mergeStudySets(id, studySets));
         store.clear();
-        migrated.forEach(studySet => store.put(studySet));
+        studySets.forEach(studySet => store.put(studySet));
       } catch (error) {
         console.error('No se pudieron migrar los temas guardados', error);
         transaction.abort();
       }
     };
+  }
+
+  // Con su clave normalizada, los temas que coinciden ("Comida" y "comida") se fusionan.
+  private mergeByTopicKey(studySets: StoredStudySet[]): StoredStudySet[] {
+    const groups = new Map<string, StoredStudySet[]>();
+    for (const studySet of studySets) {
+      const id = this.getStudySetId(studySet.topic);
+      groups.set(id, [...(groups.get(id) ?? []), studySet]);
+    }
+    return [...groups].map(([id, group]) => this.mergeStudySets(id, group));
+  }
+
+  // Las aprendidas antes de los repasos de mantenimiento pasan a su primera caja, con el repaso que les habría tocado:
+  // el intervalo de esa caja desde su último repaso. Si esa fecha ya pasó, o no hay fecha (antes bastaba deslizar una
+  // vez para marcarla), se reparten en las dos próximas semanas para que no lleguen todas el mismo día.
+  private scheduleLearnedCards(studySets: StoredStudySet[]): StoredStudySet[] {
+    const now = new Date();
+    let spread = 0;
+    const inDays = (from: Date, days: number) => {
+      const date = new Date(from);
+      date.setHours(0, 0, 0, 0);
+      date.setDate(date.getDate() + days);
+      return date;
+    };
+
+    return studySets.map(studySet => ({
+      ...studySet,
+      cards: studySet.cards.map(card => {
+        if (!card.learned || (card.box ?? 0) >= learnedBox) return card;
+
+        const due = card.nextReview ? inDays(new Date(card.nextReview), reviewIntervalDays[learnedBox - 1]) : null;
+        const nextReview = due && due > now ? due : inDays(now, 1 + spread++ % 14);
+        return { ...card, box: learnedBox, nextReview: nextReview.toISOString() };
+      })
+    }));
   }
 
   private mergeStudySets(id: string, studySets: StoredStudySet[]): StoredStudySet {

@@ -1,0 +1,42 @@
+<div class="write">
+  <span class="exercise-instruction" id="write-instruction">Escríbela en inglés</span>
+
+  <div class="exercise-image">
+    <!-- alt vacío: el texto alternativo delataría la palabra. -->
+    <img *ngIf="!imageFailed" [src]="card.imageUrl" alt="" crossorigin="anonymous" draggable="false"
+      [class.ready]="imageLoaded" (load)="imageLoaded = true" (error)="onImageError()" />
+    <div class="image-fallback" *ngIf="imageFailed">
+      <ion-icon name="image-outline" aria-hidden="true"></ion-icon>
+      <span>Sin imagen</span>
+    </div>
+  </div>
+
+  <ng-container *ngIf="!done; else result">
+    <form class="write-form" (ngSubmit)="check()">
+      <!-- Sin autocorrector ni mayúscula automática: corregirían lo que se trata de saber escribir. -->
+      <input #answerInput class="answer-input" name="answer" type="text" lang="en" autocomplete="off"
+        autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="done"
+        aria-labelledby="write-instruction" aria-describedby="write-status" [attr.aria-invalid]="typed ? 'true' : null"
+        [(ngModel)]="answer" />
+      <button type="submit" class="check-button" [disabled]="!answer.trim()" aria-label="Comprobar" title="Comprobar">
+        <ion-icon name="checkmark" aria-hidden="true"></ion-icon>
+      </button>
+    </form>
+    <p class="exercise-status" id="write-status" aria-live="polite">{{ message }}</p>
+  </ng-container>
+
+  <ng-template #result>
+    <div class="exercise-result" [class.correct]="state === 'correct'" [class.wrong]="state === 'wrong'" aria-live="polite">
+      <span class="result-label">
+        {{ state === 'wrong' ? 'La palabra era' : typed ? 'Se escribe así' : 'Escribiste' }}
+      </span>
+      <div class="result-word">
+        <strong>{{ card.word }}</strong>
+        <ion-button fill="clear" class="speak-button" aria-label="Escuchar pronunciación" (click)="speak.emit()">
+          <ion-icon slot="icon-only" name="volume-high-outline"></ion-icon>
+        </ion-button>
+      </div>
+      <span class="result-note" *ngIf="typed">Escribiste «{{ typed }}»{{ state === 'correct' ? ': casi' : '' }}</span>
+    </div>
+  </ng-template>
+</div>

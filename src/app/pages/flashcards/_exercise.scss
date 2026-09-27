@@ -1,4 +1,4 @@
-// Piezas comunes de los ejercicios (opción múltiple y hablar): cada componente las incluye con @use.
+// Piezas comunes de los ejercicios (opción múltiple, hablar, escribir…): cada componente las incluye con @use.
 :host {
   display: block;
   width: 100%;
@@ -14,8 +14,8 @@
   text-transform: uppercase;
 }
 
-// "Ahora no puedo hablar / escuchar": el ejercicio deja de salir en la sesión.
-.decline {
+// Acción secundaria en texto: "Ahora no puedo hablar / escuchar", "Ya la conozco".
+.text-action {
   padding: 6px 12px;
   border: none;
   background: transparent;
@@ -77,5 +77,60 @@
 
   ion-icon {
     font-size: 2.6rem;
+  }
+}
+
+// Qué hacer o qué pasó con el intento anterior (hablar, escribir).
+.exercise-status {
+  min-height: 2.6em;
+  max-width: 300px;
+  margin: 0;
+  color: #69717d;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+}
+
+// La palabra correcta al terminar (hablar, escribir). El veredicto lo da la barra de la página.
+.exercise-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+
+  .result-label {
+    font-size: 0.9rem;
+    font-weight: 800;
+  }
+
+  &.correct .result-label {
+    color: var(--ion-color-success-shade);
+  }
+
+  &.wrong .result-label {
+    color: var(--ion-color-danger);
+  }
+
+  .result-word {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    strong {
+      color: #20242b;
+      font-size: clamp(1.8rem, 8vw, 2.3rem);
+      font-weight: 800;
+      line-height: 1.1;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  // Lo que se dijo o escribió, si no era la palabra exacta.
+  .result-note {
+    color: #69717d;
+    font-size: 0.85rem;
+    font-weight: 600;
   }
 }

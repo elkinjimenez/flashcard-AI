@@ -68,7 +68,8 @@
 
       <section class="panel">
         <h2 class="panel-title">Tus palabras</h2>
-        <p class="panel-note">Cada repaso acertado la acerca a «aprendida»; fallarla la devuelve a «aprendiendo».</p>
+        <p class="panel-note">Cada repaso acertado la acerca a «aprendida»; fallarla la devuelve a «aprendiendo». Las
+          aprendidas vuelven de vez en cuando para que no se olviden.</p>
         <div class="stage-bar" role="img" [attr.aria-label]="stagesDescription">
           <ng-container *ngFor="let stage of stages">
             <span class="stage-segment" *ngIf="s.stages[stage.id]" [attr.data-stage]="stage.id"
@@ -102,19 +103,33 @@
 
       <section class="panel">
         <h2 class="panel-title">Las que más te cuestan</h2>
+        <p class="panel-note" *ngIf="s.hardestWords.length">Desde {{ mnemonicMisses }} fallos, la IA te propone un truco
+          para recordarlas: algo en español que suena parecido.</p>
         <p class="panel-note" *ngIf="!s.hardestWords.length">Cuando falles una palabra, aparecerá aquí para que la tengas presente.</p>
         <ul class="hard-list" *ngIf="s.hardestWords.length">
           <li *ngFor="let item of s.hardestWords">
-            <!-- crossorigin: así el service worker la guarda para verla sin conexión (ver ngsw-config.json). -->
-            <img *ngIf="item.imageUrl; else noImage" [src]="item.imageUrl" alt="" crossorigin="anonymous" loading="lazy" />
-            <ng-template #noImage>
-              <span class="hard-no-image"><ion-icon name="image-outline" aria-hidden="true"></ion-icon></span>
-            </ng-template>
-            <span class="hard-text">
-              <strong>{{ item.word }}</strong>
-              <span>{{ item.translation }} · {{ item.topic }}</span>
-            </span>
-            <span class="hard-misses">{{ count(item.misses, 'fallo', 'fallos') }}</span>
+            <div class="hard-row">
+              <!-- crossorigin: así el service worker la guarda para verla sin conexión (ver ngsw-config.json). -->
+              <img *ngIf="item.imageUrl; else noImage" [src]="item.imageUrl" alt="" crossorigin="anonymous" loading="lazy" />
+              <ng-template #noImage>
+                <span class="hard-no-image"><ion-icon name="image-outline" aria-hidden="true"></ion-icon></span>
+              </ng-template>
+              <span class="hard-text">
+                <strong>{{ item.word }}</strong>
+                <span>{{ item.translation }} · {{ item.topic }}</span>
+              </span>
+              <span class="hard-misses">{{ count(item.misses, 'fallo', 'fallos') }}</span>
+            </div>
+            <p class="hard-mnemonic" *ngIf="item.mnemonic">
+              <ion-icon name="bulb-outline" aria-hidden="true"></ion-icon>
+              <span><span class="visually-hidden">Truco para recordarla: </span>{{ item.mnemonic }}</span>
+            </p>
+            <button type="button" class="create-mnemonic" *ngIf="canCreateMnemonic(item)"
+              [disabled]="creatingMnemonics.has(item)" (click)="createMnemonic(item)">
+              <ion-spinner *ngIf="creatingMnemonics.has(item); else bulb" name="crescent" aria-hidden="true"></ion-spinner>
+              <ng-template #bulb><ion-icon name="bulb-outline" aria-hidden="true"></ion-icon></ng-template>
+              {{ creatingMnemonics.has(item) ? 'Creando un truco…' : 'Crear un truco para recordarla' }}
+            </button>
           </li>
         </ul>
       </section>

@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Flashcard } from './flashcard.model';
+import { Flashcard, isNewCard } from './flashcard.model';
 import { DailyActivity, StudySetRepository } from './study-set-repository';
 import { toDayKey } from './day-key';
 
@@ -13,7 +13,7 @@ export interface TopicStats {
   total: number;
 }
 
-export interface HardWord extends Pick<Flashcard, 'word' | 'translation' | 'imageUrl'> {
+export interface HardWord extends Pick<Flashcard, 'word' | 'translation' | 'imageUrl' | 'mnemonic'> {
   misses: number;
   topic: string;
 }
@@ -28,7 +28,8 @@ export interface Stats {
   week: DailyActivity[];
   // Aciertos de la semana (0..1); null si no respondió nada.
   weekAccuracy: number | null;
-  // Repasos que ya tocan (las palabras nuevas no cuentan) y los que tocarán mañana.
+  // Repasos que ya tocan, también los de mantenimiento de las aprendidas (las palabras nuevas no cuentan), y los que
+  // tocarán mañana.
   dueToday: number;
   dueTomorrow: number;
   topics: TopicStats[];
@@ -63,7 +64,8 @@ export class StatsService {
 
     const nowIso = now.toISOString();
     const dayAfterTomorrow = this.startOfDay(this.addDays(now, 2)).toISOString();
-    const pending = cards.filter(({ card }) => !card.learned && card.nextReview);
+    // También las aprendidas: tienen sus repasos de mantenimiento.
+    const pending = cards.filter(({ card }) => card.nextReview);
 
     return {
       totalWords: cards.length,
@@ -90,6 +92,7 @@ export class StatsService {
           word: card.word,
           translation: card.translation,
           imageUrl: card.imageUrl,
+          mnemonic: card.mnemonic,
           misses: card.misses ?? 0,
           topic
         }))
@@ -99,7 +102,7 @@ export class StatsService {
   // Nueva: aún no se respondió. Aprendiendo: cajas 0 a 2. Afianzada: cajas 3 a 5, a un paso de aprenderse.
   private stageOf(card: Flashcard): WordStage {
     if (card.learned) return 'learned';
-    if (card.box === undefined && !card.nextReview) return 'new';
+    if (isNewCard(card)) return 'new';
     return (card.box ?? 0) >= 3 ? 'consolidating' : 'learning';
   }
 

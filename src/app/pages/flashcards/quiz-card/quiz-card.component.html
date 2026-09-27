@@ -38,7 +38,7 @@
         <ng-container *ngTemplateOutlet="badge; context: { $implicit: optionState(option) }"></ng-container>
       </button>
     </div>
-    <button type="button" class="decline" *ngIf="kind === 'listen' && !revealed" (click)="declineListening.emit()">
+    <button type="button" class="text-action" *ngIf="kind === 'listen' && !revealed" (click)="declineListening.emit()">
       Ahora no puedo escuchar
     </button>
   </ng-container>

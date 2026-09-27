@@ -1,0 +1,78 @@
+@use '../exercise';
+
+.write {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.write-form {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.answer-input {
+  flex: 1;
+  min-width: 0;
+  height: 58px;
+  box-sizing: border-box;
+  padding: 0 16px;
+  border: 2px solid rgba(35, 42, 52, 0.12);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(35, 42, 52, 0.06);
+  color: #20242b;
+  font: inherit;
+  // 16 px o más: con menos, Safari hace zoom al enfocar.
+  font-size: 1.2rem;
+  font-weight: 700;
+  transition: border-color 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--ion-color-primary);
+  }
+
+  // Tras un intento fallido.
+  &[aria-invalid='true'] {
+    border-color: rgba(var(--ion-color-danger-rgb), 0.55);
+  }
+}
+
+.check-button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 58px;
+  height: 58px;
+  padding: 0;
+  border: none;
+  border-radius: 16px;
+  background: var(--ion-color-primary);
+  box-shadow: 0 10px 22px rgba(var(--ion-color-primary-rgb), 0.28);
+  color: #ffffff;
+  cursor: pointer;
+  appearance: none;
+  transition: transform 0.15s ease, opacity 0.2s ease;
+
+  ion-icon {
+    font-size: 26px;
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--ion-color-primary);
+    outline-offset: 3px;
+  }
+
+  &:not(:disabled):active {
+    transform: scale(0.94);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    box-shadow: none;
+    cursor: default;
+  }
+}

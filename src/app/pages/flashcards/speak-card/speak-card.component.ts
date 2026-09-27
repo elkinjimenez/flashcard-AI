@@ -5,7 +5,7 @@ import { addIcons } from 'ionicons';
 import { bulbOutline, imageOutline, mic, volumeHighOutline } from 'ionicons/icons';
 import { Flashcard } from 'src/app/services/flashcard';
 import { SpeechRecognitionError, SpeechRecognitionService } from 'src/app/services/speech-recognition';
-import { isSameWord, wordPattern } from 'src/app/services/word-forms';
+import { isSameWord, normalizeAnswer, wordPattern } from 'src/app/services/word-forms';
 
 // blocked: sin micrófono o sin permiso.
 type SpeakState = 'idle' | 'listening' | 'blocked' | 'correct' | 'wrong';
@@ -24,7 +24,7 @@ interface Hint {
 const defaultMessage = 'Toca el micrófono y di la palabra en inglés.';
 
 // Ejercicio de habla: ver la imagen y decir la palabra. Dos intentos; los fallos del reconocimiento (no oír nada,
-// sin conexión) no gastan intento. Si la imagen no basta, hay pistas que se destapan de una en una.
+// sin conexión) no gastan intento. Si la imagen no basta, hay pistas que se destapan de una en una (si se permiten).
 @Component({
   selector: 'app-speak-card',
   standalone: true,
@@ -38,6 +38,8 @@ export class SpeakCardComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) card!: Flashcard;
   // Cambia en cada aparición de una tarjeta: reinicia el ejercicio.
   @Input({ required: true }) round!: number;
+  // Sin pistas cuando la palabra ya está avanzada: hay que decirla de memoria.
+  @Input() hintsAllowed = true;
   @Output() answered = new EventEmitter<boolean>();
   @Output() speak = new EventEmitter<void>();
   // Sin micrófono o si ahora no puede hablar: la página deja de sortear este ejercicio.
@@ -179,8 +181,8 @@ export class SpeakCardComponent implements OnChanges, OnDestroy {
   // Busca la palabra dentro de lo dicho ("the apple"), sin fijarse en mayúsculas, tildes ni guiones.
   // En las de varias palabras cada una puede llevar su terminación ("ice creams", "getting up").
   private match(transcript: string): Match {
-    const target = this.normalize(this.card.word).split(' ').filter(Boolean);
-    const heard = this.normalize(transcript).split(' ').filter(Boolean);
+    const target = normalizeAnswer(this.card.word).split(' ').filter(Boolean);
+    const heard = normalizeAnswer(transcript).split(' ').filter(Boolean);
     if (!target.length) return null;
     if (heard.join('') === target.join('')) return 'exact';
 
@@ -215,12 +217,4 @@ export class SpeakCardComponent implements OnChanges, OnDestroy {
       .join('   ');
   }
 
-  private normalize(text: string): string {
-    return text
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[̀-ͯ]/g, '')
-      .replace(/[^a-z0-9']+/g, ' ')
-      .trim();
-  }
 }

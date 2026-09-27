@@ -38,6 +38,10 @@
   <app-session-summary *ngIf="summary" [summary]="summary" (reviewHard)="reviewHardCards()"
     (undo)="undo()" (exit)="exitStudy()"></app-session-summary>
 
+  <app-intro-card class="quiz-scene" *ngIf="!loading && !loadingError && !summary && exercise === 'intro'"
+    [card]="currentCard!" [attr.data-motion]="cardMotion" (animationend)="onCardAnimationEnd($event)"
+    (speak)="speak(currentCard!.word)" (known)="markKnown()"></app-intro-card>
+
   <app-quiz-card class="quiz-scene" *ngIf="!loading && !loadingError && !summary && quizKind as kind"
     [kind]="kind" [card]="currentCard!" [options]="quizOptions" [choice]="quizChoice" [revealed]="exerciseAnswered"
     [attr.data-motion]="cardMotion" (animationend)="onCardAnimationEnd($event)"
@@ -45,10 +49,16 @@
     (declineListening)="onListeningDeclined()" (imageError)="onExerciseImageError()"></app-quiz-card>
 
   <app-speak-card class="quiz-scene" *ngIf="!loading && !loadingError && !summary && exercise === 'speak'"
-    [card]="currentCard!" [round]="exerciseRound"
+    [card]="currentCard!" [round]="exerciseRound" [hintsAllowed]="speakHints"
     [attr.data-motion]="cardMotion" (animationend)="onCardAnimationEnd($event)"
     (answered)="onSpeakAnswered($event)" (speak)="speak(currentCard!.word)"
     (unavailable)="onSpeechUnavailable($event)" (imageError)="onExerciseImageError()"></app-speak-card>
+
+  <app-write-card class="quiz-scene" *ngIf="!loading && !loadingError && !summary && exercise === 'write'"
+    [card]="currentCard!" [round]="exerciseRound"
+    [attr.data-motion]="cardMotion" (animationend)="onCardAnimationEnd($event)"
+    (answered)="onWriteAnswered($event)" (speak)="speak(currentCard!.word)"
+    (imageError)="onExerciseImageError()"></app-write-card>
 
   <div class="card-scene" *ngIf="!loading && !loadingError && !summary && exercise === 'card' && currentCard as card"
        tabindex="0" role="group" aria-roledescription="tarjeta"
@@ -127,6 +137,17 @@
     <span class="hint-line"></span>
     <span id="card-hint">{{ cardHint }}</span>
     <span class="hint-line"></span>
+  </div>
+
+  <!-- Siempre presente para que el lector de pantalla anuncie el truco cuando llegue. -->
+  <div aria-live="polite">
+    <div class="mnemonic" *ngIf="!summary && (mnemonic || creatingMnemonic)">
+      <ion-icon name="bulb-outline" aria-hidden="true"></ion-icon>
+      <p>
+        <span class="mnemonic-label">Truco para recordarla</span>
+        {{ creatingMnemonic ? 'Creando uno con IA…' : mnemonic }}
+      </p>
+    </div>
   </div>
 
   <app-action-bar *ngIf="!loading && !loadingError && !summary" [mode]="actionMode" [result]="exerciseResult"

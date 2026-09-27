@@ -289,14 +289,14 @@ ion-toolbar {
   background: var(--meter-fill);
 }
 
-.hard-list li {
+.hard-list li + li {
+  margin-top: 14px;
+}
+
+.hard-row {
   display: flex;
   align-items: center;
   gap: 12px;
-
-  & + li {
-    margin-top: 12px;
-  }
 
   img,
   .hard-no-image {
@@ -335,4 +335,70 @@ ion-toolbar {
   color: var(--text-secondary);
   font-size: 0.8rem;
   font-weight: 700;
+}
+
+// Truco para recordarla, bajo la palabra y alineado con su texto. Ámbar como en la práctica: ayuda, no error.
+.hard-mnemonic,
+.create-mnemonic {
+  margin: 8px 0 0 64px;
+}
+
+.hard-mnemonic {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff7e0;
+  color: #4a3b12;
+  font-size: 0.85rem;
+  line-height: 1.45;
+
+  ion-icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: #c98a00;
+    font-size: 1.05rem;
+  }
+}
+
+.create-mnemonic {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1px solid rgba(217, 154, 0, 0.45);
+  border-radius: 999px;
+  background: transparent;
+  color: #8a5d00;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  ion-icon,
+  ion-spinner {
+    width: 1rem;
+    height: 1rem;
+    font-size: 1rem;
+  }
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.75;
+  }
+
+  &:focus-visible {
+    outline: 3px solid #c98a00;
+    outline-offset: 2px;
+  }
+}
+
+// Solo para el lector de pantalla.
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

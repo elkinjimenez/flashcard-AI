@@ -5,9 +5,13 @@ import {
   IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton, IonContent, IonSpinner, IonIcon, IonButton
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { imageOutline, statsChartOutline } from 'ionicons/icons';
+import { bulbOutline, imageOutline, statsChartOutline } from 'ionicons/icons';
 import { DailyActivity } from 'src/app/services/study-set-repository';
-import { Stats, StatsService, TopicStats, WordStage } from 'src/app/services/stats';
+import { HardWord, Stats, StatsService, TopicStats, WordStage } from 'src/app/services/stats';
+import { FlashcardService } from 'src/app/services/flashcard';
+import { mnemonicMisses } from 'src/app/services/flashcard.model';
+import { describeRequestError } from 'src/app/services/request-error';
+import { ToastService } from 'src/app/services/toast';
 
 const weekdayInitials = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 const weekdayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -34,17 +38,44 @@ const todayIndex = 6;
 })
 export class StatsPage {
   private statsService = inject(StatsService);
+  private flashcardService = inject(FlashcardService);
+  private toast = inject(ToastService);
 
   readonly stages = stages;
   readonly todayIndex = todayIndex;
+  readonly mnemonicMisses = mnemonicMisses;
   stats: Stats | null = null;
   loading = true;
   loadingError = false;
   // Día de la semana cuyo detalle se muestra bajo el gráfico.
   selectedDay = todayIndex;
+  // Palabras cuyo truco está creando la IA.
+  creatingMnemonics = new Set<HardWord>();
 
   constructor() {
-    addIcons({ imageOutline, statsChartOutline });
+    addIcons({ bulbOutline, imageOutline, statsChartOutline });
+  }
+
+  // Normalmente se crea al fallarla en la práctica; las que ya costaban antes de existir el truco lo piden aquí.
+  canCreateMnemonic(item: HardWord): boolean {
+    return item.mnemonic === undefined && item.misses >= mnemonicMisses;
+  }
+
+  async createMnemonic(item: HardWord) {
+    if (this.creatingMnemonics.has(item)) return;
+
+    this.creatingMnemonics.add(item);
+    try {
+      item.mnemonic = await this.flashcardService.getMnemonic(item.topic, item);
+      if (!item.mnemonic) {
+        this.toast.show(`La IA no encontró un truco para «${item.word}».`);
+      }
+    } catch (error) {
+      console.error('No se pudo crear el truco para recordarla', error);
+      this.toast.show(`No se pudo crear el truco. ${describeRequestError(error)}`, { color: 'danger', duration: 5000 });
+    } finally {
+      this.creatingMnemonics.delete(item);
+    }
   }
 
   // En cada visita: al volver de practicar, los números cambian.

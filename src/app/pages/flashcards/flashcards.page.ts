@@ -7,20 +7,38 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
-  volumeHighOutline, arrowBackOutline, imageOutline, imagesOutline, eyeOutline, eyeOffOutline
+  volumeHighOutline, arrowBackOutline, imageOutline, imagesOutline, eyeOutline, eyeOffOutline, bulbOutline
 } from 'ionicons/icons';
 import { AnswerRecord, Flashcard, FlashcardService } from 'src/app/services/flashcard';
+import { isNewCard, mnemonicMisses } from 'src/app/services/flashcard.model';
 import { SessionSummary, SessionSummaryComponent } from './session-summary/session-summary.component';
 import { QuizCardComponent, QuizKind } from './quiz-card/quiz-card.component';
 import { SpeakCardComponent, SpeechUnavailableReason } from './speak-card/speak-card.component';
+import { IntroCardComponent } from './intro-card/intro-card.component';
+import { WriteAnswer, WriteCardComponent } from './write-card/write-card.component';
 import { ImagePickerComponent } from './image-picker/image-picker.component';
 import { ActionBarComponent, ActionMode } from './action-bar/action-bar.component';
 import { SpeechRecognitionService } from 'src/app/services/speech-recognition';
-import { wordPattern } from 'src/app/services/word-forms';
+import { isSameWord, wordPattern } from 'src/app/services/word-forms';
 import { ToastService } from 'src/app/services/toast';
 
-// speak: ver la imagen y decir la palabra en voz alta.
-type ExerciseKind = 'card' | QuizKind | 'speak';
+// Los que se sortean. speak: ver la imagen y decir la palabra en voz alta. write: verla y escribirla.
+type DrawnExercise = 'card' | QuizKind | 'speak' | 'write';
+// intro: presentar una palabra nueva, sin preguntar.
+type ExerciseKind = DrawnExercise | 'intro';
+
+// Qué se le pide a una palabra según su caja de Leitner, de más fácil a más difícil: reconocer qué significa (0-1),
+// recordar cómo se dice con ayuda (2-3) y producirla de memoria (4 en adelante, también en los repasos de mantenimiento
+// de las aprendidas). Así, para aprenderla hay que pasar por todas.
+type Stage = 'recognize' | 'recall' | 'produce';
+
+function stageOf(card: Flashcard): Stage {
+  const box = card.box ?? 0;
+  return box <= 1 ? 'recognize' : box <= 3 ? 'recall' : 'produce';
+}
+
+// Tarjetas entre la presentación de una palabra nueva y su primer ejercicio: así hay que recordarla, no solo repetirla.
+const introGap = 3;
 
 function shuffle<T>(items: T[]): T[] {
   const result = [...items];
@@ -31,6 +49,37 @@ function shuffle<T>(items: T[]): T[] {
   return result;
 }
 
+// Orden de la sesión: cada palabra nueva sale dos veces, primero presentada y `introGap` tarjetas después en un ejercicio.
+// intros: posiciones de las presentaciones.
+function planSession(sessionCards: Flashcard[]): { cards: Flashcard[]; intros: Set<number> } {
+  const cards: Flashcard[] = [];
+  const intros = new Set<number>();
+  // Presentadas que esperan su ejercicio, con la posición desde la que les toca.
+  const waiting: { card: Flashcard; at: number }[] = [];
+  const addWaiting = () => {
+    while (waiting.length && waiting[0].at <= cards.length) {
+      cards.push(waiting.shift()!.card);
+    }
+  };
+
+  for (const card of shuffle(sessionCards)) {
+    addWaiting();
+    if (isNewCard(card)) {
+      intros.add(cards.length);
+      waiting.push({ card, at: cards.length + 1 + introGap });
+    }
+    cards.push(card);
+  }
+  // Al final no quedan tarjetas con que separarlas: van seguidas.
+  cards.push(...waiting.map(item => item.card));
+  return { cards, intros };
+}
+
+// Tarjetas entre el fallo de una palabra y su repetición (de 3 a 5, al azar): pronto, cuando recordarla aún cuesta
+// un poco, que es lo que más la fija.
+const minRetryGap = 3;
+const maxRetryGap = 5;
+
 // Lo que se hizo con una tarjeta, con lo necesario para deshacerlo.
 interface SessionStep {
   index: number;
@@ -39,6 +88,10 @@ interface SessionStep {
   previousResult?: 'knew' | 'hard';
   // La respuesta guardada; undefined si no se pudo guardar.
   saved?: Promise<AnswerRecord | undefined>;
+  // Si falló, dónde se metió su repetición.
+  retryAt?: number;
+  // "Ya la conozco": dónde estaba su ejercicio, que se quitó.
+  skippedAt?: number;
 }
 
 @Component({
@@ -57,6 +110,8 @@ interface SessionStep {
     SessionSummaryComponent,
     QuizCardComponent,
     SpeakCardComponent,
+    IntroCardComponent,
+    WriteCardComponent,
     ActionBarComponent
   ],
   templateUrl: './flashcards.page.html',
@@ -85,8 +140,14 @@ export class FlashcardsPage {
   summary: SessionSummary | null = null;
   // Ejercicio de la tarjeta actual.
   exercise: ExerciseKind = 'card';
-  // Sube en cada aparición de una tarjeta: el ejercicio de habla se reinicia con él.
+  // Sube en cada aparición de una tarjeta: los ejercicios de hablar y escribir se reinician con él.
   exerciseRound = 0;
+  // En el de hablar, si se pueden pedir pistas: no cuando toca producir la palabra (ver stageOf).
+  speakHints = true;
+  // Truco para recordar la palabra recién fallada, si ya cuesta (ver showMnemonic); null si no hay.
+  mnemonic: string | null = null;
+  // La IA lo está creando.
+  creatingMnemonic = false;
   // La correcta y hasta 3 palabras más del tema, en orden aleatorio.
   quizOptions: Flashcard[] = [];
   quizChoice: Flashcard | null = null;
@@ -96,6 +157,9 @@ export class FlashcardsPage {
   autoAdvanceMs = 0;
   // Todas las palabras del tema (también las aprendidas), de donde salen las opciones incorrectas.
   private topicCards: Flashcard[] = [];
+  // Posiciones de `cards` que presentan una palabra nueva (ver planSession). Se desplazan al meter o quitar la
+  // repetición de una difícil (ver insertCard).
+  private introIndexes = new Set<number>();
   private lastExercise: ExerciseKind | null = null;
   // Sin micrófono o sin permiso, el ejercicio de habla deja de salir en la sesión.
   private speechBlocked = false;
@@ -119,9 +183,10 @@ export class FlashcardsPage {
   // Voz automática al voltear la tarjeta o al aparecer el ejercicio de escuchar.
   private autoSpeakTimer?: ReturnType<typeof setTimeout>;
   @ViewChild(SpeakCardComponent) private speakCard?: SpeakCardComponent;
+  @ViewChild(WriteCardComponent) private writeCard?: WriteCardComponent;
 
   constructor() {
-    addIcons({ volumeHighOutline, arrowBackOutline, imageOutline, imagesOutline, eyeOutline, eyeOffOutline });
+    addIcons({ volumeHighOutline, arrowBackOutline, imageOutline, imagesOutline, eyeOutline, eyeOffOutline, bulbOutline });
   }
 
   // Única carga de la sesión: Ionic llama a este hook cada vez que se entra en la página, también la primera.
@@ -152,7 +217,9 @@ export class FlashcardsPage {
     this.steps = [];
 
     try {
-      this.cards = shuffle(sessionCards);
+      const plan = planSession(sessionCards);
+      this.cards = plan.cards;
+      this.introIndexes = plan.intros;
       this.topicCards = await this.flashcardService.getTopicCards(topic);
       this.lastExercise = null;
       this.prepareExercise();
@@ -203,6 +270,7 @@ export class FlashcardsPage {
   // Solo con la palabra a la vista: el selector la muestra, así que antes delataría la respuesta.
   get canChangeImage(): boolean {
     if (this.loading || this.loadingError || this.summary || !this.currentCard) return false;
+    if (this.exercise === 'intro') return true;
     return this.exercise === 'card' ? this.isFlipped || this.imageUnavailable : this.exerciseAnswered;
   }
 
@@ -221,7 +289,8 @@ export class FlashcardsPage {
   }
 
   get actionMode(): ActionMode {
-    if (this.exerciseAnswered) return 'continue';
+    // En la presentación no hay nada que responder.
+    if (this.exerciseAnswered || this.exercise === 'intro') return 'continue';
     if (this.exercise !== 'card') return 'give-up';
     return this.isFlipped ? 'rate' : 'flip';
   }
@@ -317,27 +386,64 @@ export class FlashcardsPage {
     this.finishExercise(knew);
   }
 
-  // No lo sé: cuenta como fallo y muestra la respuesta. En el de habla la muestra el propio ejercicio, que avisa con answered.
+  // Tras fallar una palabra que ya cuesta (ver mnemonicMisses), su truco para recordarla: el guardado o uno nuevo de la
+  // IA. Con el progreso guardado, que dice cuántas veces se ha fallado. Solo mientras siga en pantalla ese ejercicio.
+  private async showMnemonic(saved?: Promise<AnswerRecord | undefined>) {
+    const round = this.exerciseRound;
+    const topic = this.topic;
+    const previous = (await saved)?.previous;
+    if (!previous || (previous.misses ?? 0) + 1 < mnemonicMisses || round !== this.exerciseRound) return;
+
+    this.creatingMnemonic = previous.mnemonic === undefined;
+    try {
+      const mnemonic = await this.flashcardService.getMnemonic(topic, previous);
+      if (round === this.exerciseRound) {
+        this.mnemonic = mnemonic || null;
+      }
+    } catch (error) {
+      // Sin truco (p. ej. sin conexión): se pedirá en el próximo fallo.
+      console.warn('No se pudo crear el truco para recordarla', error);
+    } finally {
+      if (round === this.exerciseRound) {
+        this.creatingMnemonic = false;
+      }
+    }
+  }
+
+  // Si valió con una errata u otra forma de la palabra, espera a Continuar: que vea cómo se escribe.
+  onWriteAnswered({ knew, corrected }: WriteAnswer) {
+    this.finishExercise(knew, !corrected);
+  }
+
+  // No lo sé: cuenta como fallo y muestra la respuesta. En los de hablar y escribir la muestra el propio ejercicio,
+  // que avisa con answered.
   giveUp() {
     if (this.exercise === 'speak') {
       this.speakCard?.giveUp();
+    } else if (this.exercise === 'write') {
+      this.writeCard?.giveUp();
     } else {
       this.finishExercise(false);
     }
   }
 
-  // Acertar cuenta como La sé y fallar como Difícil. Si acierta pasa sola; si falla espera a Continuar, para que vea cuál era.
-  private finishExercise(knew: boolean) {
+  // Acertar cuenta como La sé y fallar como Difícil. Si acierta pasa sola (salvo con autoAdvance a false); si falla
+  // espera a Continuar, para que vea cuál era.
+  private finishExercise(knew: boolean, autoAdvance = true) {
     const card = this.currentCard;
     if (!card || this.exerciseAnswered || this.answering) return;
 
     this.exerciseResult = knew;
-    this.registerAnswer(card, knew);
+    const step = this.registerAnswer(card, knew);
     this.speak(card.word);
+    if (!knew) {
+      this.showMnemonic(step.saved);
+    }
 
     // Eligiendo imagen espera más: tras responder, cada imagen muestra su palabra y da tiempo a leerlas.
     const pickedImage = this.exercise === 'pick-image' || this.exercise === 'listen';
-    this.autoAdvanceMs = !knew ? 0 : pickedImage ? 3000 : this.exercise === 'speak' ? 1500 : 1000;
+    const produced = this.exercise === 'speak' || this.exercise === 'write';
+    this.autoAdvanceMs = !knew || !autoAdvance ? 0 : pickedImage ? 3000 : produced ? 1500 : 1000;
     if (this.autoAdvanceMs) {
       this.advanceAfter(this.autoAdvanceMs);
     }
@@ -418,27 +524,64 @@ export class FlashcardsPage {
     }, delayMs);
   }
 
-  // Guarda la respuesta y la apunta en la sesión y en el historial para poder deshacerla.
-  private registerAnswer(card: Flashcard, knew: boolean) {
-    this.steps.push({
+  // Ya la conocía (en su presentación): salta a una caja alta y se quita su ejercicio de la sesión. En el resumen
+  // cuenta como La sé.
+  markKnown() {
+    const card = this.currentCard;
+    if (!card || this.exercise !== 'intro' || this.answering) return;
+
+    const step = this.registerAnswer(card, true, topic => this.flashcardService.markKnown(topic, card.word));
+    // Por palabra: cambiar la imagen crea copias nuevas de la tarjeta. Detrás de la presentación solo está su ejercicio.
+    const skippedAt = this.cards.findIndex((other, index) => index > this.currentIndex && other.word === card.word);
+    if (skippedAt >= 0) {
+      step.skippedAt = skippedAt;
+      this.removeCard(skippedAt);
+    }
+    this.showToast(`«${card.word}» pasa a tus repasos: volverá en unas semanas para comprobarlo.`, 'dark');
+    this.advance();
+  }
+
+  // Guarda la respuesta (por defecto, la de un ejercicio) y la apunta en la sesión y en el historial para poder deshacerla.
+  private registerAnswer(
+    card: Flashcard,
+    knew: boolean,
+    save = (topic: string) => this.flashcardService.recordAnswer(topic, card.word, knew)
+  ): SessionStep {
+    const step: SessionStep = {
       index: this.currentIndex,
       card,
       knew,
       previousResult: this.sessionResults.get(card.word),
-      saved: this.saveAnswer(card, knew)
-    });
+      saved: this.saveAnswer(card, save)
+    };
+    this.steps.push(step);
     if (knew) {
       if (!this.sessionResults.has(card.word)) {
         this.sessionResults.set(card.word, 'knew');
       }
     } else {
       this.sessionResults.set(card.word, 'hard');
-      // Las difíciles se repiten al final de la sesión.
-      this.cards.push(card);
+      // La difícil se repite unas tarjetas después (al final, si quedan menos), en la caja 0 como queda guardada: vuelve
+      // a los ejercicios de reconocer (ver stageOf). reviewHardCards se queda con esta copia, la última de cada palabra.
+      const gap = minRetryGap + Math.floor(Math.random() * (maxRetryGap - minRetryGap + 1));
+      step.retryAt = Math.min(this.currentIndex + 1 + gap, this.cards.length);
+      this.insertCard(step.retryAt, { ...card, box: 0 });
     }
+    return step;
   }
 
-  // Continuar tras un ejercicio respondido: la respuesta ya está en el historial, solo se pasa a la siguiente.
+  // Las presentaciones que quedan detrás se desplazan con ella.
+  private insertCard(position: number, card: Flashcard) {
+    this.cards.splice(position, 0, card);
+    this.introIndexes = new Set([...this.introIndexes].map(index => index >= position ? index + 1 : index));
+  }
+
+  private removeCard(position: number) {
+    this.cards.splice(position, 1);
+    this.introIndexes = new Set([...this.introIndexes].map(index => index > position ? index - 1 : index));
+  }
+
+  // Continuar tras un ejercicio respondido (la respuesta ya está en el historial) o tras una presentación.
   advance() {
     if (this.answering) return;
 
@@ -491,19 +634,27 @@ export class FlashcardsPage {
     } else {
       this.sessionResults.delete(step.card.word);
     }
-    // La difícil se había añadido al final de la sesión. Se quita después de moverse: moveTo compara con la tarjeta actual.
-    if (!step.knew) {
-      this.cards.pop();
+    // Se quita la repetición de la difícil después de moverse: moveTo compara con la tarjeta actual. Sigue en retryAt: las
+    // que se metieron después ya se quitaron al deshacer sus pasos, que van antes.
+    if (step.retryAt !== undefined) {
+      this.removeCard(step.retryAt);
+    }
+    // "Ya la conozco": vuelve su ejercicio.
+    if (step.skippedAt !== undefined) {
+      this.insertCard(step.skippedAt, step.card);
     }
     this.undoSavedAnswer(step.saved);
   }
 
   // No se espera desde el swipe para no frenar la animación; los errores se avisan aquí.
-  private saveAnswer(card: Flashcard, knew: boolean): Promise<AnswerRecord | undefined> {
+  private saveAnswer(
+    card: Flashcard,
+    save: (topic: string) => Promise<AnswerRecord | undefined>
+  ): Promise<AnswerRecord | undefined> {
     const topic = this.topic;
     return this.enqueueSave(async () => {
       try {
-        return await this.flashcardService.recordAnswer(topic, card.word, knew);
+        return await save(topic);
       } catch (error) {
         console.error('No se pudo guardar la respuesta', error);
         this.showError(`No se pudo guardar tu respuesta para "${card.word}".`);
@@ -580,8 +731,9 @@ export class FlashcardsPage {
     }
   }
 
-  // Cada aparición de una tarjeta sortea su ejercicio (tarjeta, elige la imagen, elige la palabra, escucha o dilo en voz alta)
-  // sin repetir el anterior. Sin imagen, o sin otras palabras del tema que sirvan de opción, se muestra como tarjeta normal.
+  // La presentación de una palabra nueva no pregunta nada. Las demás apariciones sortean un ejercicio de su etapa
+  // (ver stageOf) sin repetir el anterior, si hay otro. Si no se puede ninguno (sin imagen, o sin otras palabras del
+  // tema que sirvan de opción), se muestra como tarjeta normal.
   private prepareExercise() {
     this.clearQuizTimer();
     // La voz pendiente era del ejercicio anterior: en "elige la palabra" daría la respuesta.
@@ -592,30 +744,36 @@ export class FlashcardsPage {
     this.quizOptions = [];
     this.exerciseResult = null;
     this.autoAdvanceMs = 0;
+    this.mnemonic = null;
+    this.creatingMnemonic = false;
 
     const card = this.currentCard;
     if (!card) return;
 
-    const kinds: ExerciseKind[] = card.imageUrl ? ['card', 'pick-image', 'pick-word'] : ['card'];
-    if (card.imageUrl && 'speechSynthesis' in window && !this.listeningDeclined) {
-      kinds.push('listen');
+    // No cuenta para no repetir ejercicio: el siguiente se sortea contra el último de verdad.
+    if (this.introIndexes.has(this.currentIndex)) {
+      this.exercise = 'intro';
+      this.speakSoon(card.word);
+      return;
     }
-    // Solo donde hay reconocimiento de voz (hoy, Chrome y Safari; no Firefox ni la app nativa).
-    if (card.imageUrl && this.speech.isSupported && !this.speechBlocked) {
-      kinds.push('speak');
-    }
-    const candidates = kinds.length > 1 ? kinds.filter(kind => kind !== this.lastExercise) : kinds;
-    const kind = candidates[Math.floor(Math.random() * candidates.length)];
 
-    if (kind === 'speak') {
-      this.exercise = 'speak';
-    } else if (kind !== 'card') {
-      const distractors = this.pickDistractors(card, kind);
-      if (distractors.length) {
-        this.exercise = kind;
+    const stage = stageOf(card);
+    const kinds = this.exercisesFor(card, stage);
+    const ordered = [
+      ...shuffle(kinds.filter(kind => kind !== this.lastExercise)),
+      ...kinds.filter(kind => kind === this.lastExercise)
+    ];
+    for (const kind of ordered) {
+      if (kind === 'pick-image' || kind === 'pick-word' || kind === 'listen') {
+        const distractors = this.pickDistractors(card, kind);
+        if (!distractors.length) continue;
         this.quizOptions = shuffle([card, ...distractors]);
       }
+      this.exercise = kind;
+      break;
     }
+    // Al producirla hay que decirla de memoria.
+    this.speakHints = stage !== 'produce';
     this.lastExercise = this.exercise;
 
     if (this.exercise === 'listen') {
@@ -623,23 +781,44 @@ export class FlashcardsPage {
     }
   }
 
-  // Hasta 3 palabras del tema, aprendidas o no, que no se confundan con la correcta.
+  // Los ejercicios de cada etapa. Todos menos la tarjeta necesitan la imagen: sin ella, la tarjeta muestra la palabra.
+  private exercisesFor(card: Flashcard, stage: Stage): DrawnExercise[] {
+    if (!card.imageUrl) return ['card'];
+
+    const canListen = 'speechSynthesis' in window && !this.listeningDeclined;
+    // Solo donde hay reconocimiento de voz (hoy, Chrome y Safari; no Firefox ni la app nativa).
+    const canSpeak = this.speech.isSupported && !this.speechBlocked;
+    if (stage === 'recognize') return canListen ? ['pick-image', 'listen'] : ['pick-image'];
+    if (stage === 'recall') return canSpeak ? ['pick-word', 'speak', 'card'] : ['pick-word', 'card'];
+    return canSpeak ? ['write', 'speak'] : ['write'];
+  }
+
+  // Hasta 3 opciones falsas que no sean también correctas. Primero las que se confunden con ella (las propuso la IA al
+  // crearla: knife / fork, shelf / shell), para que haya que distinguirla de verdad; luego otras del tema al azar,
+  // aprendidas o no.
   private pickDistractors(card: Flashcard, kind: QuizKind): Flashcard[] {
-    const seenWords = new Set([card.word.toLowerCase()]);
+    const target = card.word.toLowerCase();
+    const seenWords = new Set([target]);
     const seenTranslations = new Set([card.translation.toLowerCase()]);
     const seenImages = new Set([card.imageUrl]);
     const distractors: Flashcard[] = [];
 
-    for (const other of shuffle(this.topicCards)) {
+    // Las que no son del tema no tienen imagen ni traducción: solo sirven para elegir la palabra.
+    const topicCardsByWord = new Map(this.topicCards.map(other => [other.word.toLowerCase(), other]));
+    const confusables = (card.confusables ?? [])
+      .map(word => topicCardsByWord.get(word.toLowerCase()) ?? { word, translation: '', imageUrl: '' });
+
+    for (const other of [...confusables, ...shuffle(this.topicCards)]) {
       const word = other.word.toLowerCase();
       const translation = other.translation.toLowerCase();
-      // Mismo significado (p. ej. "big" y "large"): serían dos respuestas correctas.
-      if (seenWords.has(word) || seenTranslations.has(translation)) continue;
+      if (seenWords.has(word)) continue;
+      // Mismo significado ("big" y "large") u otra forma de la palabra ("knives"): serían dos respuestas correctas.
+      if ((translation && seenTranslations.has(translation)) || isSameWord(word, target)) continue;
       // Eligiendo imagen, cada opción necesita una imagen propia.
       if (kind !== 'pick-word' && (!other.imageUrl || seenImages.has(other.imageUrl))) continue;
 
       seenWords.add(word);
-      seenTranslations.add(translation);
+      if (translation) seenTranslations.add(translation);
       seenImages.add(other.imageUrl);
       distractors.push(other);
       if (distractors.length === 3) break;
@@ -686,6 +865,8 @@ export class FlashcardsPage {
     );
 
     this.cards = shuffle([...hardCards.values()]);
+    // Ya se presentaron en la sesión.
+    this.introIndexes = new Set();
     this.currentIndex = 0;
     this.showFront();
     this.prepareExercise();

@@ -1,0 +1,38 @@
+<div class="intro">
+  <span class="intro-badge">
+    <ion-icon name="sparkles" aria-hidden="true"></ion-icon>
+    Palabra nueva
+  </span>
+
+  <div class="exercise-image">
+    <!-- alt vacío: la palabra ya está escrita debajo. -->
+    <img *ngIf="!imageUnavailable" [src]="card.imageUrl" alt="" crossorigin="anonymous" draggable="false"
+      [class.ready]="imageReady" (load)="onImageLoad(card.imageUrl)" (error)="onImageError(card.imageUrl)" />
+    <div class="image-fallback" *ngIf="imageUnavailable">
+      <ion-icon name="image-outline" aria-hidden="true"></ion-icon>
+      <span>Sin imagen</span>
+    </div>
+  </div>
+
+  <div class="intro-word">
+    <strong>{{ card.word }}</strong>
+    <ion-button fill="clear" class="speak-button" aria-label="Escuchar pronunciación" (click)="speak.emit()">
+      <ion-icon slot="icon-only" name="volume-high-outline"></ion-icon>
+    </ion-button>
+  </div>
+
+  <p class="example" *ngIf="card.example">
+    <ng-container *ngFor="let part of exampleParts; let odd = odd">
+      <strong *ngIf="odd">{{ part }}</strong>
+      <ng-container *ngIf="!odd">{{ part }}</ng-container>
+    </ng-container>
+  </p>
+
+  <button type="button" class="translation-toggle" [class.revealed]="showTranslation"
+    [attr.aria-pressed]="showTranslation" (click)="showTranslation = !showTranslation">
+    <ion-icon aria-hidden="true" [name]="showTranslation ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+    {{ showTranslation ? card.translation : 'Ver en español' }}
+  </button>
+
+  <button type="button" class="text-action" (click)="known.emit()">Ya la conozco</button>
+</div>

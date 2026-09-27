@@ -5,17 +5,29 @@ import { environment } from 'src/environments/environment';
 import { toTopicKey } from './topic-key';
 import { EnglishLevel, englishLevelLabel } from './english-level';
 
-export interface WordSuggestion {
+// Vacíos si Gemini no los devolvió.
+export interface WordDetails {
+  example: string;
+  confusables: string[];
+}
+
+export interface WordSuggestion extends WordDetails {
   word: string;
   translation: string;
-  // Vacías si Gemini no las devolvió.
-  example: string;
+  // Vacía si Gemini no la devolvió.
   imageQuery: string;
 }
 
 const exampleProperty = {
   type: 'STRING',
   description: 'Frase corta en inglés (máximo 12 palabras) que contenga la palabra exacta'
+};
+
+// Las opciones falsas de los ejercicios: deben parecerse, pero viendo la imagen solo la palabra correcta puede valer.
+const confusablesProperty = {
+  type: 'ARRAY',
+  items: { type: 'STRING' },
+  description: 'Hasta 3 palabras en inglés, del mismo nivel, que un estudiante podría confundir con esta: de su misma categoría (knife → fork, spoon) o que se escriben o suenan parecido (shelf → shell). Nunca sinónimos ni otras formas de la misma palabra'
 };
 
 const wordsResponseSchema = {
@@ -30,9 +42,10 @@ const wordsResponseSchema = {
       imageQuery: {
         type: 'STRING',
         description: 'Búsqueda de 2 o 3 palabras en inglés para encontrar su GIF: debe incluir la propia palabra y mostrarla de forma literal, como el título de un GIF. Ej.: "kitchen tongs", "man yawning", "red apple fruit"'
-      }
+      },
+      confusables: confusablesProperty
     },
-    required: ['word', 'translation', 'example', 'imageQuery']
+    required: ['word', 'translation', 'example', 'imageQuery', 'confusables']
   }
 };
 
@@ -48,15 +61,16 @@ const imagePicksResponseSchema = {
   }
 };
 
-const examplesResponseSchema = {
+const detailsResponseSchema = {
   type: 'ARRAY',
   items: {
     type: 'OBJECT',
     properties: {
       word: { type: 'STRING', description: 'La palabra tal como se pidió' },
-      example: exampleProperty
+      example: exampleProperty,
+      confusables: confusablesProperty
     },
-    required: ['word', 'example']
+    required: ['word', 'example', 'confusables']
   }
 };
 
@@ -83,7 +97,7 @@ export class GeminiService {
   // Devuelve como máximo `count` palabras válidas, sin repetir entre sí ni con `excludedWords` (en minúsculas).
   async suggestWords(topic: string, count: number, excludedWords: Set<string>, level: EnglishLevel): Promise<WordSuggestion[]> {
     const text = await this.generateText(
-      `Dame exactamente ${count} palabras de vocabulario en ingles de ${this.describeLevel(level)} sobre el tema "${topic}", cada una con su traduccion al español, una frase de ejemplo en inglés adecuada para ese nivel y una búsqueda para encontrar su GIF.`
+      `Dame exactamente ${count} palabras de vocabulario en ingles de ${this.describeLevel(level)} sobre el tema "${topic}", cada una con su traduccion al español, una frase de ejemplo en inglés adecuada para ese nivel, una búsqueda para encontrar su GIF y las palabras con que se suele confundir.`
       + ' Las palabras se aprenden reconociéndolas en un GIF, así que elige solo palabras que se entiendan con solo ver la imagen: objetos, animales, lugares, acciones visibles o emociones con un gesto claro.'
       + ' Evita palabras abstractas o que necesiten contexto para entenderse (como "reliable", "achieve" o "concept").'
       + (excludedWords.size ? ` No incluyas estas palabras que ya tengo: ${[...excludedWords].join(', ')}.` : ''),
@@ -111,20 +125,35 @@ export class GeminiService {
     return picks;
   }
 
-  // Frases de ejemplo para palabras guardadas sin ella, indexadas por la palabra en minúsculas.
-  async suggestExamples(words: string[], level: EnglishLevel): Promise<Map<string, string>> {
+  // Truco para recordar una palabra con el método de la palabra clave: algo en español que suene como ella, unido a su
+  // significado en una imagen mental. '' si no dio ninguno.
+  async suggestMnemonic(word: string, translation: string): Promise<string> {
     const text = await this.generateText(
-      `Escribe una frase de ejemplo en inglés, adecuada para un estudiante de ${this.describeLevel(level)}, para cada una de estas palabras: ${words.join(', ')}.`,
-      { responseMimeType: 'application/json', responseSchema: examplesResponseSchema }
+      `Crea un truco para que un hispanohablante recuerde la palabra inglesa "${word}" (${translation}) con el método de la palabra clave:`
+      + ` elige una palabra o frase corta en español que suene parecido a cómo se pronuncia "${word}" en inglés y únela a su significado en una imagen mental vívida, concreta y fácil de visualizar.`
+      + ' Escribe la palabra clave entre comillas latinas («»). Responde solo con el truco, en una o dos frases y como máximo 30 palabras, sin títulos, listas ni explicaciones.'
+    );
+    // Sin el formato de Markdown que a veces añade (negritas) ni comillas alrededor de todo.
+    return text.replace(/\*+/g, '').replace(/\s+/g, ' ').trim().replace(/^"(.*)"$/, '$1');
+  }
+
+  // Frase de ejemplo y palabras confundibles para palabras guardadas antes de existir, indexadas por la palabra en minúsculas.
+  async suggestDetails(words: string[], level: EnglishLevel): Promise<Map<string, WordDetails>> {
+    const text = await this.generateText(
+      `Para cada una de estas palabras en inglés, escribe una frase de ejemplo adecuada para un estudiante de ${this.describeLevel(level)} y las palabras con que se suele confundir: ${words.join(', ')}.`,
+      { responseMimeType: 'application/json', responseSchema: detailsResponseSchema }
     );
 
-    const examples = new Map<string, string>();
+    const details = new Map<string, WordDetails>();
     for (const item of this.parseJsonArray(text)) {
       const word = typeof item?.word === 'string' ? item.word.trim().toLowerCase() : '';
-      const example = typeof item?.example === 'string' ? item.example.trim() : '';
-      if (word && example) examples.set(word, example);
+      if (!word) continue;
+      details.set(word, {
+        example: typeof item?.example === 'string' ? item.example.trim() : '',
+        confusables: this.parseConfusables(item?.confusables, word)
+      });
     }
-    return examples;
+    return details;
   }
 
   private async generateText(prompt: string, generationConfig?: object): Promise<string> {
@@ -166,11 +195,26 @@ export class GeminiService {
       if (!word || !translation || seenWords.has(key)) continue;
 
       seenWords.add(key);
-      words.push({ word, translation, example, imageQuery });
+      words.push({ word, translation, example, imageQuery, confusables: this.parseConfusables(item?.confusables, word) });
       if (words.length === count) break;
     }
 
     return words;
+  }
+
+  // Como mucho 3, sin repetir y sin la propia palabra.
+  private parseConfusables(value: unknown, word: string): string[] {
+    if (!Array.isArray(value)) return [];
+
+    const seen = new Set([word.toLowerCase()]);
+    const confusables: string[] = [];
+    for (const item of value) {
+      const confusable = typeof item === 'string' ? item.trim() : '';
+      if (!confusable || seen.has(confusable.toLowerCase())) continue;
+      seen.add(confusable.toLowerCase());
+      confusables.push(confusable);
+    }
+    return confusables.slice(0, 3);
   }
 
   // [] si la respuesta no es un array JSON válido.

@@ -11,7 +11,7 @@
       <span>Sin imagen</span>
     </div>
 
-    <button type="button" class="hint-button" *ngIf="!done && hintsShown < hints.length" (click)="showHint()">
+    <button type="button" class="hint-button" *ngIf="hintsAllowed && !done && hintsShown < hints.length" (click)="showHint()">
       <ion-icon name="bulb-outline" aria-hidden="true"></ion-icon>
       {{ hintsShown ? 'Otra pista' : 'Pista' }}
     </button>
@@ -30,12 +30,12 @@
       (click)="listen()">
       <ion-icon name="mic" aria-hidden="true"></ion-icon>
     </button>
-    <p class="speak-status" aria-live="polite">{{ state === 'listening' ? 'Escuchando…' : message }}</p>
-    <button type="button" class="decline" (click)="declineSpeaking()">Ahora no puedo hablar</button>
+    <p class="exercise-status" aria-live="polite">{{ state === 'listening' ? 'Escuchando…' : message }}</p>
+    <button type="button" class="text-action" (click)="declineSpeaking()">Ahora no puedo hablar</button>
   </ng-container>
 
   <ng-template #result>
-    <div class="speak-result" [class.correct]="state === 'correct'" [class.wrong]="state === 'wrong'" aria-live="polite">
+    <div class="exercise-result" [class.correct]="state === 'correct'" [class.wrong]="state === 'wrong'" aria-live="polite">
       <!-- El veredicto lo da la barra de la página. Si valió otra forma (jumping), se enseña la exacta. -->
       <span class="result-label">
         {{ state === 'wrong' ? 'La palabra era' : heard ? 'La palabra exacta es' : 'Dijiste' }}
@@ -46,7 +46,7 @@
           <ion-icon slot="icon-only" name="volume-high-outline"></ion-icon>
         </ion-button>
       </div>
-      <span class="result-heard" *ngIf="heard">Oí «{{ heard }}»{{ state === 'correct' ? ': también vale' : '' }}</span>
+      <span class="result-note" *ngIf="heard">Oí «{{ heard }}»{{ state === 'correct' ? ': también vale' : '' }}</span>
     </div>
   </ng-template>
 </div>
