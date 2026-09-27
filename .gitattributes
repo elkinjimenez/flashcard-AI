@@ -1,0 +1,11 @@
+# Forzar LF en todo el repo (evita CRLF en Windows con core.autocrlf=true).
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.woff binary
+*.woff2 binary

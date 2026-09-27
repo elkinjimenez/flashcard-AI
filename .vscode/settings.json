@@ -4,5 +4,6 @@
     "@ionic/angular/directives",
     "@ionic/angular/index.d.ts",
     "@ionic/angular/providers"
-  ]
+  ],
+  "files.eol": "\n"
 }
