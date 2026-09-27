@@ -1,0 +1,4 @@
+# Se copia a la raíz del build (www/) y viaja en el commit de `ng deploy` a gh-pages.
+# Evita que git convierta saltos de línea al publicar: si cambia un solo byte,
+# el hash en ngsw.json no coincide y el service worker entra en modo degradado.
+* -text
