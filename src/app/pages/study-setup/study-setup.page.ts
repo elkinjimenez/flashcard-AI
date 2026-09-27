@@ -40,13 +40,15 @@ import {
   carOutline,
   peopleOutline
 } from 'ionicons/icons';
-import { FlashcardService, TopicResult } from 'src/app/services/flashcard';
+import { FlashcardService, TopicProgress, TopicResult } from 'src/app/services/flashcard';
+import { toTopicKey } from 'src/app/services/topic-key';
 
 interface Topic {
   id: string;
   label: string;
   icon: string;
   fromLocal: boolean;
+  progress?: TopicProgress;
 }
 
 @Component({
@@ -76,7 +78,7 @@ export class StudySetupPage implements OnInit {
   loadingCards = false;
   cardsError = false;
   topicMenuOpen = false;
-  topicToDelete: Topic | null = null;
+  menuTopic: Topic | null = null;
   private topicPressTimer?: ReturnType<typeof setTimeout>;
   private ignoreNextTopicClick = false;
 
@@ -133,11 +135,12 @@ export class StudySetupPage implements OnInit {
       const result: TopicResult = await this.flashcardService.getTopics();
       if (result.topics.length) {
         this.topics = result.topics.map(label => ({
-          id: this.toTopicId(label),
+          id: toTopicKey(label),
           label,
           icon: this.pickIcon(label),
           fromLocal: result.fromLocal
         }));
+        await this.refreshProgress();
       } else {
         this.topicsError = true;
       }
@@ -149,13 +152,32 @@ export class StudySetupPage implements OnInit {
     }
   }
 
-  private toTopicId(label: string): string {
-    return label
-      .toLocaleLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
+  // Al volver de una sesión, el progreso (y los temas recién guardados) cambian.
+  async ionViewWillEnter() {
+    if (!this.loadingTopics && this.topics.length) {
+      await this.refreshProgress();
+    }
+  }
+
+  private async refreshProgress() {
+    try {
+      const progress = await this.flashcardService.getTopicsProgress();
+      this.topics = this.topics.map(topic => {
+        const topicProgress = progress.get(topic.id);
+        return { ...topic, progress: topicProgress, fromLocal: topic.fromLocal || !!topicProgress };
+      });
+    } catch (error) {
+      console.error('No se pudo cargar el progreso de los temas', error);
+    }
+  }
+
+  topicAriaLabel(topic: Topic): string {
+    const parts = [topic.label];
+    if (topic.progress) {
+      parts.push(`ya sabes ${topic.progress.known} de ${topic.progress.total} palabras`);
+    }
+    parts.push(topic.fromLocal ? 'tema guardado' : 'tema nuevo de la IA');
+    return parts.join(', ');
   }
 
   selectTopic(topicId: string) {
@@ -172,7 +194,7 @@ export class StudySetupPage implements OnInit {
 
     this.topicPressTimer = setTimeout(() => {
       this.ignoreNextTopicClick = true;
-      this.topicToDelete = topic;
+      this.menuTopic = topic;
       this.topicMenuOpen = true;
     }, 600);
   }
@@ -184,15 +206,43 @@ export class StudySetupPage implements OnInit {
     }
   }
 
+  // Clic derecho, tecla Menú o Mayús+F10 sobre un tema guardado: el mismo menú que la pulsación larga.
+  openTopicMenu(topic: Topic, event: Event) {
+    if (!topic.fromLocal) return;
+    event.preventDefault();
+    this.cancelTopicPress();
+    this.menuTopic = topic;
+    this.topicMenuOpen = true;
+  }
+
   closeTopicMenu() {
     this.topicMenuOpen = false;
-    this.topicToDelete = null;
+    this.menuTopic = null;
+    // Tras la pulsación larga el click puede no llegar a la tarjeta (el menú la tapa); sin esto se perdería el siguiente toque.
+    this.ignoreNextTopicClick = false;
   }
 
   async deleteSelectedTopic() {
-    const topic = this.topicToDelete;
+    const topic = this.menuTopic;
     this.closeTopicMenu();
     if (topic) await this.deleteTopic(topic);
+  }
+
+  async resetSelectedTopic() {
+    const topic = this.menuTopic;
+    this.closeTopicMenu();
+    if (topic) await this.resetTopic(topic);
+  }
+
+  async resetTopic(topic: Topic) {
+    if (!confirm(`¿Reiniciar el progreso de "${topic.label}"? Las palabras se mantienen, pero volverán a aparecer como nuevas.`)) return;
+
+    try {
+      await this.flashcardService.resetTopic(topic.label);
+      await this.refreshProgress();
+    } catch (error) {
+      console.error('No se pudo reiniciar el tema', error);
+    }
   }
 
   async deleteTopic(topic: Topic) {
@@ -228,7 +278,7 @@ export class StudySetupPage implements OnInit {
       const labels = await this.flashcardService.getMoreTopics(this.topics.map(topic => topic.label));
       const localTopics = this.topics.filter(topic => topic.fromLocal);
       const suggestedTopics = labels.map(label => ({
-        id: this.toTopicId(label),
+        id: toTopicKey(label),
         label,
         icon: this.pickIcon(label),
         fromLocal: false

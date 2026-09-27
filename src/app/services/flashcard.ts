@@ -1,35 +1,33 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
-import { environment } from 'src/environments/environment';
+import { Flashcard } from './flashcard.model';
+import { GeminiService } from './gemini';
+import { KlipyService } from './klipy';
+import { StudySetRepository, currentImageSearchVersion } from './study-set-repository';
+import { toTopicKey } from './topic-key';
 
-export interface Flashcard {
-  word: string;
-  translation: string;
-  imageUrl: string;
-  learned?: boolean;
-}
-
-interface StoredStudySet {
-  id: string;
-  topic: string;
-  cards: Flashcard[];
-  createdAt: string;
-  imageSearchVersion?: number;
-}
+export type { Flashcard } from './flashcard.model';
 
 export interface TopicResult {
   topics: string[];
   fromLocal: boolean;
 }
 
+export interface TopicProgress {
+  // Palabras acertadas en su último repaso o ya aprendidas.
+  known: number;
+  total: number;
+}
+
+// Días hasta el próximo repaso al subir a cada caja (1..5). Acertar en la última caja marca la palabra como aprendida.
+const reviewIntervalDays = [1, 3, 7, 14, 30];
 
 @Injectable({ providedIn: 'root' })
 export class FlashcardService {
-  private readonly databaseName = 'flashcards-ai';
-  private readonly storeName = 'study-sets';
-
-  constructor(private http: HttpClient) {}
+  constructor(
+    private gemini: GeminiService,
+    private klipy: KlipyService,
+    private studySets: StudySetRepository
+  ) {}
 
   async getTopics(): Promise<TopicResult> {
     const storedTopics = await this.readTopics();
@@ -37,297 +35,131 @@ export class FlashcardService {
       return { topics: storedTopics, fromLocal: true };
     }
 
-    return { topics: await this.requestTopics([]), fromLocal: false };
+    return { topics: await this.gemini.suggestTopics([]), fromLocal: false };
   }
 
   async getMoreTopics(displayedTopics: string[] = []): Promise<string[]> {
     const storedTopics = await this.readTopics();
     const excludedTopics = this.mergeTopics(storedTopics, displayedTopics);
-    const newTopics = await this.requestTopics(excludedTopics);
+    const newTopics = await this.gemini.suggestTopics(excludedTopics);
     return newTopics.filter(topic => !this.hasTopic(excludedTopics, topic));
   }
 
-  private async requestTopics(excludedTopics: string[]): Promise<string[]> {
-    const params = new HttpParams().set('key', atob(environment.geminiApiKey));
-    const excludedText = excludedTopics.length
-      ? ` No incluyas estos temas ya guardados: ${excludedTopics.join(', ')}.`
-      : '';
-    const response = await firstValueFrom(this.http.post<GeminiResponse>(
-      environment.geminiTopicsUrl,
-      {
-        contents: [{
-          parts: [{
-            text: `Dame 6 temas nuevos y cortos en español para aprender vocabulario de ingles. Cada tema debe tener como máximo 1 palabra, ser claro y no incluir descripciones, explicaciones ni frases largas.${excludedText} Responde únicamente con la lista separada por comas.`
-          }]
-        }]
-      },
-      { params }
-    ));
+  async generateFlashcards(topic: string, count: number): Promise<Flashcard[]> {
+    const storedStudySet = await this.studySets.get(topic);
+    const storedCards = storedStudySet?.cards ?? [];
+    const dueCards = this.getDueCards(storedCards);
 
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    if (dueCards.length >= count) {
+      if (storedStudySet?.imageSearchVersion === currentImageSearchVersion) {
+        const sessionCards = dueCards.slice(0, count);
+        const retriedCards = await this.klipy.retryMissingImages(sessionCards);
+        if (retriedCards.some((card, index) => card.imageUrl !== sessionCards[index].imageUrl)) {
+          await this.studySets.save(topic, this.klipy.fillImages(storedCards, retriedCards));
+        }
+        return retriedCards;
+      }
 
-    return this.parseTopics(text);
+      const migratedCards = await this.klipy.withImages(storedCards);
+      await this.studySets.save(topic, migratedCards);
+      return this.getDueCards(migratedCards).slice(0, count);
+    }
+
+    const existingWords = new Set(storedCards.map(card => card.word.toLowerCase()));
+    const suggestions = await this.gemini.suggestWords(topic, count - dueCards.length, existingWords);
+    const newCards: Flashcard[] = suggestions.map(suggestion => ({ ...suggestion, imageUrl: '' }));
+
+    // Si Gemini devuelve menos palabras de las pedidas, la sesión simplemente es más corta.
+    if (!newCards.length && !dueCards.length) {
+      throw new Error('Gemini no devolvio palabras validas');
+    }
+
+    const retriedDueCards = await this.klipy.retryMissingImages(dueCards);
+    const newCardsWithImages = await this.klipy.withImages(newCards);
+
+    const allCards = [...this.klipy.fillImages(storedCards, retriedDueCards), ...newCardsWithImages];
+    await this.studySets.save(topic, allCards);
+    return [...retriedDueCards, ...newCardsWithImages];
   }
 
-  private parseTopics(text: string): string[] {
-    return text
-      .split(',')
-      .map(topic => topic.replace(/^\s*\d+[.)-]\s*/, '').trim())
-      .filter((topic, index, topics) => topic.length > 0 && topics.findIndex(item => item.toLocaleLowerCase() === topic.toLocaleLowerCase()) === index)
-      .slice(0, 6);
+  // null: el tema no está guardado. []: no hay repasos pendientes ni palabras nuevas por estudiar.
+  async getStoredFlashcards(topic: string, count: number): Promise<Flashcard[] | null> {
+    const record = await this.studySets.get(topic);
+    if (!record) return null;
+    return this.getDueCards(record.cards).slice(0, count);
+  }
+
+  async recordAnswer(topic: string, word: string, knew: boolean): Promise<void> {
+    await this.studySets.updateCards(topic, cards => cards.map(card =>
+      card.word === word ? this.applyAnswer(card, knew) : card
+    ));
+  }
+
+  // Mantiene las palabras e imágenes, pero todas vuelven a ser nuevas.
+  async resetTopic(topic: string): Promise<void> {
+    await this.studySets.updateCards(topic, cards => cards.map(({ word, translation, imageUrl }) =>
+      ({ word, translation, imageUrl })
+    ));
+  }
+
+  // Indexado por la clave del tema (toTopicKey).
+  async getTopicsProgress(): Promise<Map<string, TopicProgress>> {
+    const studySets = await this.studySets.getAll();
+    return new Map(studySets.map(studySet => [toTopicKey(studySet.topic), {
+      known: studySet.cards.filter(card => card.learned || (card.box ?? 0) >= 1).length,
+      total: studySet.cards.length
+    }]));
+  }
+
+  async deleteTopic(topic: string): Promise<void> {
+    await this.studySets.delete(topic);
+  }
+
+  // Leitner: acertar sube una caja y aleja el próximo repaso; fallar la devuelve a la caja 0 para repasarla ya.
+  private applyAnswer(card: Flashcard, knew: boolean): Flashcard {
+    const now = new Date();
+    if (!knew) {
+      return { ...card, box: 0, nextReview: now.toISOString() };
+    }
+
+    // Acertar una tarjeta que aún no tocaba (p. ej. al repasar las difíciles) no adelanta su calendario.
+    if (card.nextReview && card.nextReview > now.toISOString()) {
+      return card;
+    }
+
+    const box = card.box ?? 0;
+    if (box >= reviewIntervalDays.length) {
+      return { ...card, learned: true };
+    }
+
+    const nextReview = new Date(now);
+    nextReview.setHours(0, 0, 0, 0);
+    nextReview.setDate(nextReview.getDate() + reviewIntervalDays[box]);
+    return { ...card, box: box + 1, nextReview: nextReview.toISOString() };
+  }
+
+  // Tarjetas que tocan hoy: primero los repasos (los más atrasados antes) y luego las palabras nuevas.
+  private getDueCards(cards: Flashcard[]): Flashcard[] {
+    const now = new Date().toISOString();
+    const dueCards = cards.filter(card => !card.learned && (!card.nextReview || card.nextReview <= now));
+    const reviews = dueCards
+      .filter(card => card.nextReview)
+      .sort((a, b) => (a.nextReview ?? '').localeCompare(b.nextReview ?? ''));
+    return [...reviews, ...dueCards.filter(card => !card.nextReview)];
+  }
+
+  private async readTopics(): Promise<string[]> {
+    const studySets = await this.studySets.getAll();
+    return this.mergeTopics([], studySets.map(studySet => studySet.topic));
   }
 
   private mergeTopics(existingTopics: string[], newTopics: string[]): string[] {
     return [...existingTopics, ...newTopics].filter((topic, index, topics) =>
-      topics.findIndex(item => item.toLocaleLowerCase() === topic.toLocaleLowerCase()) === index
+      topics.findIndex(item => toTopicKey(item) === toTopicKey(topic)) === index
     );
   }
 
   private hasTopic(topics: string[], topic: string): boolean {
-    return topics.some(item => item.toLocaleLowerCase() === topic.toLocaleLowerCase());
+    return topics.some(item => toTopicKey(item) === toTopicKey(topic));
   }
-
-  async generateFlashcards(topic: string, count: number): Promise<Flashcard[]> {
-    const storedStudySet = await this.readStudySet(this.getStudySetId(topic));
-    const storedCards = storedStudySet?.cards ?? [];
-
-    if (storedCards.length >= count) {
-      if (storedStudySet?.imageSearchVersion === 3) {
-        return storedCards.slice(0, count);
-      }
-
-      const migratedCards = await Promise.all(
-        storedCards.map(async card => ({
-          ...card,
-          imageUrl: await this.getKlipyImageUrl(card.word, card.translation)
-        }))
-      );
-      await this.saveStudySet(topic, migratedCards);
-      return migratedCards.slice(0, count);
-    }
-
-    const missing = count - storedCards.length;
-    const existingWords = new Set(storedCards.map(card => card.word.toLowerCase()));
-
-    const params = new HttpParams().set('key', atob(environment.geminiApiKey));
-    const response = await firstValueFrom(this.http.post<GeminiResponse>(
-      environment.geminiTopicsUrl,
-      {
-        contents: [{
-          parts: [{
-            text: `Dame exactamente ${missing} palabras de vocabulario en ingles sobre el tema "${topic}"${existingWords.size ? `. No incluyas estas palabras que ya tengo: ${[...existingWords].join(', ')}` : ''}. Responde unicamente con un JSON valido, sin markdown, usando este formato: [{"word":"English word","translation":"traduccion en espanol"}]`
-          }]
-        }]
-      },
-      { params }
-    ));
-
-    const text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    const newCards = this.parseFlashcards(text, missing);
-
-    if (newCards.length < missing) {
-      throw new Error('Gemini no devolvio la cantidad solicitada de palabras');
-    }
-
-    const newCardsWithImages = await Promise.all(
-      newCards.map(async card => ({
-        ...card,
-        imageUrl: await this.getKlipyImageUrl(card.word, card.translation)
-      }))
-    );
-
-    const allCards = [...storedCards, ...newCardsWithImages];
-    await this.saveStudySet(topic, allCards);
-    return allCards.slice(0, count);
-  }
-
-  async getStoredFlashcards(topic: string, count: number): Promise<Flashcard[] | null> {
-    const record = await this.readStudySet(this.getStudySetId(topic));
-    return record?.cards ?? null;
-  }
-
-  async markAsLearned(topic: string, count: number, word: string): Promise<void> {
-    const id = this.getStudySetId(topic);
-    const record = await this.readStudySet(id);
-    if (!record) return;
-
-    record.cards = record.cards.map(card =>
-      card.word === word ? { ...card, learned: true } : card
-    );
-
-    const database = await this.openDatabase();
-    await new Promise<void>((resolve, reject) => {
-      const transaction = database.transaction(this.storeName, 'readwrite');
-      transaction.objectStore(this.storeName).put(record);
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
-    database.close();
-  }
-
-  async deleteTopic(topic: string): Promise<void> {
-    const database = await this.openDatabase();
-    await new Promise<void>((resolve, reject) => {
-      const transaction = database.transaction(this.storeName, 'readwrite');
-      const store = transaction.objectStore(this.storeName);
-      const request = store.getAll();
-
-      request.onsuccess = () => {
-        const studySets = request.result as StoredStudySet[];
-        studySets
-          .filter(studySet => studySet.topic === topic)
-          .forEach(studySet => store.delete(studySet.id));
-      };
-      request.onerror = () => reject(request.error);
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
-    database.close();
-  }
-
-  private parseFlashcards(text: string, count: number): Flashcard[] {
-    const json = text.replace(/^```(?:json)?\s*|\s*```$/gi, '').trim();
-    let parsed: Array<{ word?: string; translation?: string }>;
-
-    try {
-      parsed = JSON.parse(json);
-    } catch {
-      return [];
-    }
-
-    return parsed
-      .map(card => ({
-        word: card.word?.trim() ?? '',
-        translation: card.translation?.trim() ?? '',
-        imageUrl: ''
-      }))
-      .filter(card => card.word.length > 0 && card.translation.length > 0)
-      .slice(0, count);
-  }
-
-  private async getKlipyImageUrl(word: string, translation: string): Promise<string> {
-    const searchTerms = [
-      word,
-      `${word} ${translation}`
-    ];
-
-    for (const searchTerm of searchTerms) {
-      const params = new HttpParams()
-        .set('per_page', '1')
-        .set('content_filter', 'low')
-        .set('q', searchTerm)
-        .set('fields', 'file.hd.webp');
-
-      const response = await firstValueFrom(this.http.get<KlipyResponse>(
-        environment.klipySearchUrl,
-        { params }
-      ));
-      const imageUrl = this.findImageUrl(response);
-
-      if (imageUrl) {
-        return imageUrl;
-      }
-    }
-
-    return '';
-  }
-
-  private async saveStudySet(topic: string, cards: Flashcard[]): Promise<void> {
-    const database = await this.openDatabase();
-    await new Promise<void>((resolve, reject) => {
-      const transaction = database.transaction(this.storeName, 'readwrite');
-      transaction.objectStore(this.storeName).put({
-        id: this.getStudySetId(topic),
-        topic,
-        cards,
-        createdAt: new Date().toISOString(),
-        imageSearchVersion: 3
-      } satisfies StoredStudySet);
-      transaction.oncomplete = () => resolve();
-      transaction.onerror = () => reject(transaction.error);
-    });
-    database.close();
-  }
-
-  private async readStudySet(id: string): Promise<StoredStudySet | undefined> {
-    const database = await this.openDatabase();
-    const record = await new Promise<StoredStudySet | undefined>((resolve, reject) => {
-      const transaction = database.transaction(this.storeName, 'readonly');
-      const request = transaction.objectStore(this.storeName).get(id);
-      request.onsuccess = () => resolve(request.result as StoredStudySet | undefined);
-      request.onerror = () => reject(request.error);
-    });
-    database.close();
-    return record;
-  }
-
-  private async readTopics(): Promise<string[]> {
-    const database = await this.openDatabase();
-    const topics = await new Promise<string[]>((resolve, reject) => {
-      const transaction = database.transaction(this.storeName, 'readonly');
-      const request = transaction.objectStore(this.storeName).getAll();
-      request.onsuccess = () => {
-        const studySets = request.result as StoredStudySet[];
-        resolve(this.mergeTopics([], studySets.map(studySet => studySet.topic)));
-      };
-      request.onerror = () => reject(request.error);
-    });
-    database.close();
-    return topics;
-  }
-
-  private openDatabase(): Promise<IDBDatabase> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.databaseName, 3);
-      request.onupgradeneeded = () => {
-        const database = request.result;
-        if (!database.objectStoreNames.contains(this.storeName)) {
-          database.createObjectStore(this.storeName, { keyPath: 'id' });
-        }
-      };
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  private getStudySetId(topic: string): string {
-    return topic;
-  }
-
-  private findImageUrl(value: unknown): string | undefined {
-    if (typeof value === 'string' && /^https?:\/\//.test(value)) {
-      return value;
-    }
-
-    if (!value || typeof value !== 'object') {
-      return undefined;
-    }
-
-    const objectValue = value as Record<string, unknown>;
-    for (const key of ['file', 'hd', 'webp', 'url', 'src']) {
-      if (key in objectValue) {
-        const url = this.findImageUrl(objectValue[key]);
-        if (url) return url;
-      }
-    }
-
-    for (const child of Object.values(objectValue)) {
-      const url = this.findImageUrl(child);
-      if (url) return url;
-    }
-
-    return undefined;
-  }
-}
-
-interface GeminiResponse {
-  candidates?: Array<{
-    content?: {
-      parts?: Array<{ text?: string }>;
-    };
-  }>;
-}
-
-interface KlipyResponse {
-  [key: string]: unknown;
 }

@@ -6,7 +6,8 @@
     <p class="setup-intro">Elige un tema y crea una sesión a tu medida.</p>
   </div>
 
-  <ion-action-sheet [isOpen]="topicMenuOpen" header="Tema guardado" [buttons]="[
+  <ion-action-sheet [isOpen]="topicMenuOpen" [header]="menuTopic?.label ?? 'Tema guardado'" [buttons]="[
+      { text: 'Reiniciar progreso', handler: resetSelectedTopic.bind(this) },
       { text: 'Eliminar', role: 'destructive', handler: deleteSelectedTopic.bind(this) },
       { text: 'Cancelar', role: 'cancel', handler: closeTopicMenu.bind(this) }
     ]" (didDismiss)="closeTopicMenu()"></ion-action-sheet>
@@ -23,16 +24,23 @@
   </p>
 
   <div class="topics-grid" *ngIf="!loadingTopics && !topicsError">
-    <div *ngFor="let topic of topics" class="topic-card" [class.selected]="selectedTopic === topic.id"
-      [class.saved]="topic.fromLocal"
+    <button type="button" *ngFor="let topic of topics" class="topic-card" [class.selected]="selectedTopic === topic.id"
+      [class.saved]="topic.fromLocal" [attr.aria-pressed]="selectedTopic === topic.id"
+      [attr.aria-label]="topicAriaLabel(topic)"
+      [attr.aria-description]="topic.fromLocal ? 'Tecla Menú o Mayús+F10 para reiniciar o eliminar' : null"
       (pointerdown)="startTopicPress(topic)" (pointerup)="cancelTopicPress()" (pointercancel)="cancelTopicPress()"
-      (pointerleave)="cancelTopicPress()" (click)="selectTopic(topic.id)">
-      <ion-icon [name]="selectedTopic === topic.id ? 'checkmark-circle' : topic.icon"></ion-icon>
+      (pointerleave)="cancelTopicPress()" (click)="selectTopic(topic.id)"
+      (contextmenu)="openTopicMenu(topic, $event)" (keydown.shift.f10)="openTopicMenu(topic, $event)">
+      <ion-icon aria-hidden="true" [name]="selectedTopic === topic.id ? 'checkmark-circle' : topic.icon"></ion-icon>
       <span>{{ topic.label }}</span>
+      <span class="topic-progress" *ngIf="topic.progress"
+        [attr.title]="'Ya sabes ' + topic.progress.known + ' de ' + topic.progress.total + ' palabras'">
+        {{ topic.progress.known }}/{{ topic.progress.total }}
+      </span>
       <ion-icon class="topic-origin" [name]="topic.fromLocal ? 'bookmark-outline' : 'sparkles-outline'"
         [attr.aria-label]="topic.fromLocal ? 'Tema guardado localmente' : 'Tema nuevo de la IA'"
         [attr.title]="topic.fromLocal ? 'Guardado localmente' : 'Nuevo de la IA'"></ion-icon>
-    </div>
+    </button>
   </div>
 
   <ion-button *ngIf="!loadingTopics && !topicsError" expand="block" fill="outline" class="more-topics-btn"

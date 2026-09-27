@@ -10,8 +10,8 @@
 
     <div class="preview-card" aria-hidden="true">
       <span class="preview-label">WORD OF THE DAY</span>
-      <strong>curious</strong>
-      <span>curioso · curiosa</span>
+      <strong>{{ wordOfTheDay.word }}</strong>
+      <span>{{ wordOfTheDay.translation }}</span>
     </div>
 
     <ion-button expand="block" size="large" class="practice-button" [routerLink]="['/study-setup']">

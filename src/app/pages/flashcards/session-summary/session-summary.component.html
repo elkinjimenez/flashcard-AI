@@ -1,0 +1,25 @@
+<div class="session-summary">
+  <span class="title">¡Sesión terminada!</span>
+
+  <div class="stats">
+    <div class="stat knew">
+      <strong>{{ summary.knew }}</strong>
+      <span>La sé</span>
+    </div>
+    <div class="stat hard">
+      <strong>{{ summary.hard }}</strong>
+      <span>Difíciles</span>
+    </div>
+    <div class="stat" *ngIf="summary.skipped">
+      <strong>{{ summary.skipped }}</strong>
+      <span>Saltadas</span>
+    </div>
+  </div>
+
+  <p class="message">{{ message }}</p>
+
+  <ion-button *ngIf="summary.hard" expand="block" size="large" class="review-btn" (click)="reviewHard.emit()">
+    Repasar difíciles ({{ summary.hard }})
+  </ion-button>
+  <ion-button expand="block" fill="clear" class="exit-btn" (click)="exit.emit()">Elegir otro tema</ion-button>
+</div>

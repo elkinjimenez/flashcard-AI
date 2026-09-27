@@ -31,30 +31,44 @@
 
   <app-all-learned *ngIf="!loading && allLearned" (exit)="exitStudy()"></app-all-learned>
 
-  <div class="card-scene" *ngIf="!loading && !loadingError && currentCard as card"
+  <app-session-summary *ngIf="summary" [summary]="summary" (reviewHard)="reviewHardCards()"
+    (exit)="exitStudy()"></app-session-summary>
+
+  <div class="card-scene" *ngIf="!loading && !loadingError && !summary && currentCard as card"
+       tabindex="0" role="group" aria-roledescription="tarjeta"
+       [attr.aria-label]="isFlipped ? card.word + ': ' + card.translation : card.word"
+       aria-describedby="card-hint" aria-keyshortcuts="Enter Space ArrowLeft ArrowRight"
        [class.dragging]="isDragging"
        [style.transform]="cardTransform"
+       (keydown)="onCardKeydown($event)"
        (pointerdown)="onPointerDown($event)"
        (pointermove)="onPointerMove($event)"
        (pointerup)="onPointerUp()"
        (pointercancel)="onPointerUp()">
-    <div class="swipe-indicator left" [class.active]="swipeDirection === 'left'">
+    <div class="swipe-indicator left" [class.active]="swipeDirection === 'left'" aria-hidden="true">
       <span class="seal-stamp">Difícil</span>
     </div>
-    <div class="swipe-indicator right" [class.active]="swipeDirection === 'right'">
-      <span class="seal-stamp">Aprendida</span>
+    <div class="swipe-indicator right" [class.active]="swipeDirection === 'right'" aria-hidden="true">
+      <span class="seal-stamp">La sé</span>
     </div>
     <div class="card-flip" [class.flipped]="isFlipped">
 
-      <div class="card-face card-front">
+      <!-- La cara que no se ve queda inerte: ni el lector de pantalla ni el tabulador llegan a ella. -->
+      <div class="card-face card-front" [attr.inert]="isFlipped ? '' : null">
         <div class="image-stage" [class.ready]="imageLoaded">
-          <span class="image-loading" *ngIf="!imageLoaded">Cargando imagen...</span>
-          <img [src]="card.imageUrl" [alt]="card.word" (load)="onImageLoaded()" />
+          <div class="image-fallback" *ngIf="imageUnavailable">
+            <ion-icon name="image-outline" aria-hidden="true"></ion-icon>
+            <span>Sin imagen</span>
+          </div>
+          <ng-container *ngIf="!imageUnavailable">
+            <span class="image-loading" *ngIf="!imageLoaded">Cargando imagen...</span>
+            <img [src]="card.imageUrl" [alt]="card.word" draggable="false" (load)="onImageLoaded()" (error)="onImageError()" />
+          </ng-container>
         </div>
         <div class="word-label">{{ card.word }}</div>
       </div>
 
-      <div class="card-face card-back">
+      <div class="card-face card-back" [attr.inert]="isFlipped ? null : ''">
         <span class="back-type">Traducción</span>
         <span class="word-en">{{ card.word }}</span>
         <span class="back-divider" aria-hidden="true"></span>
@@ -71,13 +85,13 @@
     </div>
   </div>
 
-  <div class="hint" *ngIf="!loading && !loadingError">
+  <div class="hint" *ngIf="!loading && !loadingError && !summary">
     <span class="hint-line"></span>
-    <span>Toca para traducir · Desliza para cambiar</span>
+    <span id="card-hint">Toca para traducir · ← Difícil · La sé →</span>
     <span class="hint-line"></span>
   </div>
 
-  <div class="bottom-section" *ngIf="!loading && !loadingError">
+  <div class="bottom-section" *ngIf="!loading && !loadingError && !summary">
     <ion-button expand="block" size="large" class="next-btn" (click)="next()">
       {{ currentIndex < cards.length - 1 ? 'Siguiente' : 'Terminar' }}
       <ion-icon slot="end" name="arrow-forward-outline"></ion-icon>
