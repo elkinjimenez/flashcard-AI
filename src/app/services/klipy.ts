@@ -4,32 +4,63 @@ import { firstValueFrom, timeout } from 'rxjs';
 import { environment } from 'src/environments/environment';
 import { Flashcard } from './flashcard.model';
 
+export interface ImageCandidate {
+  // Klipy titula cada GIF con una descripción ("Whisking Egg Yolks in a Bowl"): sirve para elegir el más literal.
+  title: string;
+  url: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class KlipyService {
   private readonly requestConcurrency = 4;
   private readonly requestTimeoutMs = 5000;
+  private readonly resultsPerSearch = 8;
 
   constructor(private http: HttpClient) {}
 
-  // Si Klipy falla o no encuentra nada, conserva la imagen que ya tuviera la tarjeta.
-  withImages(cards: Flashcard[]): Promise<Flashcard[]> {
-    return this.mapWithConcurrency(cards, this.requestConcurrency, async card => ({
-      ...card,
-      imageUrl: (await this.searchImage(card.word, card.translation)) || card.imageUrl
-    }));
+  // GIFs candidatos de cada tarjeta, en el mismo orden que `cards`.
+  searchCandidates(cards: Flashcard[]): Promise<ImageCandidate[][]> {
+    return this.mapWithConcurrency(cards, this.requestConcurrency, card => this.searchCardCandidates(card));
   }
 
-  // Vuelve a buscar la imagen de las tarjetas que quedaron sin ella.
-  async retryMissingImages(cards: Flashcard[]): Promise<Flashcard[]> {
-    const cardsWithoutImage = cards.filter(card => !card.imageUrl);
-    if (!cardsWithoutImage.length) return cards;
-    return this.fillImages(cards, await this.withImages(cardsWithoutImage));
+  // Klipy busca por las palabras del título: la búsqueda visual de Gemini ("kitchen tongs") y la palabra sola dan
+  // candidatos distintos, así que se juntan. Con la traducción solo si ninguna encuentra nada.
+  private async searchCardCandidates({ word, translation, imageQuery }: Flashcard): Promise<ImageCandidate[]> {
+    const terms = [...new Set([imageQuery?.trim(), word].filter((term): term is string => !!term))];
+    const results = await Promise.all(terms.map(term => this.search(term, word)));
+    let candidates = ([] as ImageCandidate[]).concat(...results);
+    if (!candidates.length) {
+      candidates = await this.search(`${word} ${translation}`, word);
+    }
+
+    const seenUrls = new Set<string>();
+    return candidates.filter(candidate => {
+      if (seenUrls.has(candidate.url)) return false;
+      seenUrls.add(candidate.url);
+      return true;
+    });
   }
 
-  // Solo completa las tarjetas sin imagen; no toca el resto de sus datos (p. ej. learned).
-  fillImages(cards: Flashcard[], cardsWithImages: Flashcard[]): Flashcard[] {
-    const imageUrls = new Map(cardsWithImages.map(card => [card.word, card.imageUrl]));
-    return cards.map(card => card.imageUrl ? card : { ...card, imageUrl: imageUrls.get(card.word) ?? '' });
+  private async search(term: string, word: string): Promise<ImageCandidate[]> {
+    const params = new HttpParams()
+      .set('per_page', this.resultsPerSearch)
+      .set('content_filter', 'medium')
+      .set('q', term)
+      .set('fields', 'title,file.hd.webp');
+
+    try {
+      const response = await firstValueFrom(this.http.get<KlipyResponse>(
+        environment.klipySearchUrl,
+        { params }
+      ).pipe(timeout(this.requestTimeoutMs)));
+
+      return (response.data?.data ?? [])
+        .map(item => ({ title: item.title ?? '', url: this.findImageUrl(item.file) ?? '' }))
+        .filter(candidate => candidate.url);
+    } catch (error) {
+      console.warn(`No se pudo buscar la imagen de "${word}" (${term})`, error);
+      return [];
+    }
   }
 
   private async mapWithConcurrency<T, R>(items: T[], limit: number, mapper: (item: T) => Promise<R>): Promise<R[]> {
@@ -47,37 +78,6 @@ export class KlipyService {
     return results;
   }
 
-  private async searchImage(word: string, translation: string): Promise<string> {
-    const searchTerms = [
-      word,
-      `${word} ${translation}`
-    ];
-
-    try {
-      for (const searchTerm of searchTerms) {
-        const params = new HttpParams()
-          .set('per_page', '1')
-          .set('content_filter', 'medium')
-          .set('q', searchTerm)
-          .set('fields', 'file.hd.webp');
-
-        const response = await firstValueFrom(this.http.get<KlipyResponse>(
-          environment.klipySearchUrl,
-          { params }
-        ).pipe(timeout(this.requestTimeoutMs)));
-        const imageUrl = this.findImageUrl(response);
-
-        if (imageUrl) {
-          return imageUrl;
-        }
-      }
-    } catch (error) {
-      console.warn(`No se pudo obtener la imagen de "${word}"`, error);
-    }
-
-    return '';
-  }
-
   private findImageUrl(value: unknown): string | undefined {
     if (typeof value === 'string' && /^https?:\/\//.test(value)) {
       return value;
@@ -88,7 +88,7 @@ export class KlipyService {
     }
 
     const objectValue = value as Record<string, unknown>;
-    for (const key of ['file', 'hd', 'webp', 'url', 'src']) {
+    for (const key of ['hd', 'webp', 'url', 'src']) {
       if (key in objectValue) {
         const url = this.findImageUrl(objectValue[key]);
         if (url) return url;
@@ -104,6 +104,9 @@ export class KlipyService {
   }
 }
 
+// Solo los campos pedidos en `fields`.
 interface KlipyResponse {
-  [key: string]: unknown;
+  data?: {
+    data?: Array<{ title?: string; file?: unknown }>;
+  };
 }

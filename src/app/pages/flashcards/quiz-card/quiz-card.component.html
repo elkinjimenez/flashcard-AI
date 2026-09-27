@@ -1,0 +1,55 @@
+<div class="quiz">
+
+  <!-- Palabra → elegir su imagen. -->
+  <ng-container *ngIf="kind === 'pick-image'">
+    <span class="exercise-instruction" id="quiz-instruction">Elige la imagen de</span>
+    <div class="quiz-word">
+      <strong>{{ card.word }}</strong>
+      <ion-button fill="clear" class="speak-button" aria-label="Escuchar pronunciación" (click)="speak.emit()">
+        <ion-icon slot="icon-only" name="volume-high-outline"></ion-icon>
+      </ion-button>
+    </div>
+
+    <div class="image-options" role="group" aria-labelledby="quiz-instruction">
+      <!-- aria-disabled en lugar de disabled: así el foco no se pierde al responder. -->
+      <button type="button" *ngFor="let option of options; let i = index" class="image-option"
+        [attr.data-state]="optionState(option)" [attr.aria-disabled]="revealed ? 'true' : null"
+        [attr.aria-label]="revealed ? option.word : 'Imagen ' + (i + 1)" (click)="choose.emit(option)">
+        <img *ngIf="!isFailed(option.imageUrl)" [src]="option.imageUrl" alt="" draggable="false"
+          [class.ready]="isLoaded(option.imageUrl)" (load)="onImageLoad(option.imageUrl)"
+          (error)="onImageError(option.imageUrl)" />
+        <ion-icon *ngIf="isFailed(option.imageUrl)" class="image-missing" name="image-outline" aria-hidden="true"></ion-icon>
+        <!-- Tras responder, cada imagen muestra su palabra: también se repasan las demás. -->
+        <span class="option-caption" *ngIf="revealed">{{ option.word }}</span>
+        <ng-container *ngTemplateOutlet="badge; context: { $implicit: optionState(option) }"></ng-container>
+      </button>
+    </div>
+  </ng-container>
+
+  <!-- Imagen → elegir su palabra. -->
+  <ng-container *ngIf="kind === 'pick-word'">
+    <span class="exercise-instruction" id="quiz-instruction">¿Qué palabra es?</span>
+    <div class="exercise-image">
+      <img *ngIf="!isFailed(card.imageUrl)" [src]="card.imageUrl" alt="" draggable="false"
+        [class.ready]="isLoaded(card.imageUrl)" (load)="onImageLoad(card.imageUrl)"
+        (error)="onImageError(card.imageUrl)" />
+      <div class="image-fallback" *ngIf="isFailed(card.imageUrl)">
+        <ion-icon name="image-outline" aria-hidden="true"></ion-icon>
+        <span>Sin imagen</span>
+      </div>
+    </div>
+
+    <div class="word-options" role="group" aria-labelledby="quiz-instruction">
+      <button type="button" *ngFor="let option of options" class="word-option" [attr.data-state]="optionState(option)"
+        [attr.aria-disabled]="revealed ? 'true' : null" (click)="choose.emit(option)">
+        {{ option.word }}
+        <ng-container *ngTemplateOutlet="badge; context: { $implicit: optionState(option) }"></ng-container>
+      </button>
+    </div>
+  </ng-container>
+</div>
+
+<ng-template #badge let-state>
+  <ion-icon class="option-badge correct" *ngIf="state === 'correct'" name="checkmark-circle" aria-hidden="true"></ion-icon>
+  <ion-icon class="option-badge wrong" *ngIf="state === 'wrong'" name="close-circle" aria-hidden="true"></ion-icon>
+</ng-template>

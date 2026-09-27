@@ -2,8 +2,10 @@ import { Injectable } from '@angular/core';
 import { Flashcard } from './flashcard.model';
 import { toTopicKey } from './topic-key';
 
-// Sube este número si cambia la forma de buscar imágenes: los temas guardados con otra versión se vuelven a buscar.
-export const currentImageSearchVersion = 3;
+// Con qué forma de buscar imágenes se creó el tema. Solo informativo: las imágenes guardadas no se vuelven a buscar
+// solas, para no gastar consultas.
+// 4: varios candidatos por palabra y Gemini elige el GIF más literal por su título.
+const currentImageSearchVersion = 4;
 
 // 4: el id de cada tema pasa a ser su clave normalizada (antes era el texto tal cual).
 const databaseVersion = 4;

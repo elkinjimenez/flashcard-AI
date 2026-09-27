@@ -11,7 +11,8 @@ import {
   IonButton,
   IonIcon,
   IonSpinner,
-  IonActionSheet
+  IonActionSheet,
+  AlertController
 } from '@ionic/angular/standalone';
 import {
   bookOutline,
@@ -40,8 +41,11 @@ import {
   carOutline,
   peopleOutline
 } from 'ionicons/icons';
-import { FlashcardService, TopicProgress, TopicResult } from 'src/app/services/flashcard';
+import { Flashcard, FlashcardService, TopicProgress, TopicResult } from 'src/app/services/flashcard';
 import { toTopicKey } from 'src/app/services/topic-key';
+import {
+  EnglishLevel, englishLevels, englishLevelLabel, loadEnglishLevel, saveEnglishLevel
+} from 'src/app/services/english-level';
 
 interface Topic {
   id: string;
@@ -75,7 +79,8 @@ export class StudySetupPage implements OnInit {
   topicsError = false;
   loadingMoreTopics = false;
   moreTopicsError = false;
-  loadingCards = false;
+  // Qué se está preparando: practicar el tema o pedir palabras nuevas.
+  loadingCards: 'practice' | 'new-words' | null = null;
   cardsError = false;
   topicMenuOpen = false;
   menuTopic: Topic | null = null;
@@ -84,10 +89,14 @@ export class StudySetupPage implements OnInit {
 
   selectedTopic: string | null = null;
   cardCount: number = 10;
+  readonly levels = englishLevels;
+  // Se recuerda entre visitas.
+  level: EnglishLevel = loadEnglishLevel();
 
   constructor(
     private router: Router,
-    private flashcardService: FlashcardService
+    private flashcardService: FlashcardService,
+    private alertController: AlertController
   ) {
     addIcons({
       bookOutline, checkmarkCircle, bookmarkOutline, sparklesOutline,
@@ -171,6 +180,15 @@ export class StudySetupPage implements OnInit {
     }
   }
 
+  get levelLabel(): string {
+    return englishLevelLabel(this.level);
+  }
+
+  setLevel(level: EnglishLevel) {
+    this.level = level;
+    saveEnglishLevel(level);
+  }
+
   topicAriaLabel(topic: Topic): string {
     const parts = [topic.label];
     if (topic.progress) {
@@ -235,7 +253,12 @@ export class StudySetupPage implements OnInit {
   }
 
   async resetTopic(topic: Topic) {
-    if (!confirm(`¿Reiniciar el progreso de "${topic.label}"? Las palabras se mantienen, pero volverán a aparecer como nuevas.`)) return;
+    const confirmed = await this.confirmAction(
+      '¿Reiniciar el progreso?',
+      `Las palabras de "${topic.label}" se mantienen, pero volverán a aparecer como nuevas.`,
+      'Reiniciar'
+    );
+    if (!confirmed) return;
 
     try {
       await this.flashcardService.resetTopic(topic.label);
@@ -246,7 +269,13 @@ export class StudySetupPage implements OnInit {
   }
 
   async deleteTopic(topic: Topic) {
-    if (!confirm(`¿Eliminar el tema "${topic.label}" y sus tarjetas guardadas?`)) return;
+    const confirmed = await this.confirmAction(
+      '¿Eliminar el tema?',
+      `Se borrarán "${topic.label}" y sus tarjetas guardadas, con todo su progreso.`,
+      'Eliminar',
+      true
+    );
+    if (!confirmed) return;
 
     try {
       await this.flashcardService.deleteTopic(topic.label);
@@ -266,6 +295,21 @@ export class StudySetupPage implements OnInit {
     } catch (error) {
       console.error('No se pudo eliminar el tema', error);
     }
+  }
+
+  // ion-alert en lugar de confirm(): el diálogo nativo del navegador desentona con el resto de la app.
+  private async confirmAction(header: string, message: string, confirmText: string, destructive = false): Promise<boolean> {
+    const alert = await this.alertController.create({
+      header,
+      message,
+      buttons: [
+        { text: 'Cancelar', role: 'cancel' },
+        { text: confirmText, role: 'confirm', cssClass: destructive ? 'alert-button-danger' : undefined }
+      ]
+    });
+    await alert.present();
+    const { role } = await alert.onDidDismiss();
+    return role === 'confirm';
   }
 
   async loadMoreTopics() {
@@ -296,25 +340,45 @@ export class StudySetupPage implements OnInit {
     }
   }
 
-  async startStudy() {
-    if (!this.selectedTopic) return;
-
+  // El tema elegido, si está guardado: se practica con sus palabras y las nuevas se piden aparte.
+  get selectedSavedTopic(): Topic | undefined {
     const topic = this.topics.find(item => item.id === this.selectedTopic);
-    if (!topic) return;
+    return topic?.progress ? topic : undefined;
+  }
 
-    this.loadingCards = true;
+  get nothingToPractice(): boolean {
+    return this.selectedSavedTopic?.progress?.pending === 0;
+  }
+
+  // Con un tema guardado no consulta a la IA; con uno nuevo lo crea.
+  startStudy() {
+    return this.openSession('practice', topic => this.flashcardService.prepareSession(topic, this.cardCount, this.level));
+  }
+
+  addNewWords() {
+    return this.openSession('new-words', topic => this.flashcardService.addWords(topic, this.cardCount, this.level));
+  }
+
+  private async openSession(mode: 'practice' | 'new-words', load: (topic: string) => Promise<Flashcard[]>) {
+    const topic = this.topics.find(item => item.id === this.selectedTopic);
+    if (!topic || this.loadingCards) return;
+
+    this.loadingCards = mode;
     this.cardsError = false;
 
     try {
-      const cards = await this.flashcardService.generateFlashcards(topic.label, this.cardCount);
-      await this.router.navigate(['/flashcards'], {
-        state: { topic: topic.label, count: this.cardCount, cards },
-      });
+      const cards = await load(topic.label);
+      if (!cards.length) {
+        // Ya se sabe todas: con el progreso al día se avisa y queda solo añadir palabras.
+        await this.refreshProgress();
+        return;
+      }
+      await this.router.navigate(['/flashcards'], { state: { topic: topic.label, cards } });
     } catch (error) {
       console.error('No se pudieron generar las tarjetas', error);
       this.cardsError = true;
     } finally {
-      this.loadingCards = false;
+      this.loadingCards = null;
     }
   }
 

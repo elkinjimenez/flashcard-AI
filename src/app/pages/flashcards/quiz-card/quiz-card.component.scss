@@ -1,0 +1,164 @@
+@use '../exercise';
+
+.quiz {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.quiz-word {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  margin-top: -6px;
+
+  strong {
+    color: #20242b;
+    font-size: clamp(1.8rem, 8vw, 2.3rem);
+    font-weight: 800;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+}
+
+// Opciones: estado común de acierto / fallo.
+.image-option,
+.word-option {
+  position: relative;
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+
+  &:focus-visible {
+    outline: 3px solid var(--ion-color-primary);
+    outline-offset: 2px;
+  }
+
+  &:not([aria-disabled='true']):active {
+    transform: scale(0.97);
+  }
+
+  &[aria-disabled='true'] {
+    cursor: default;
+  }
+
+  &[data-state='correct'] {
+    border-color: var(--ion-color-success);
+  }
+
+  &[data-state='wrong'] {
+    border-color: var(--ion-color-danger);
+  }
+
+  &[data-state='dimmed'] {
+    opacity: 0.5;
+  }
+}
+
+.option-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  z-index: 1;
+  border-radius: 50%;
+  background: #ffffff;
+  font-size: 26px;
+
+  &.correct {
+    color: var(--ion-color-success);
+  }
+
+  &.wrong {
+    color: var(--ion-color-danger);
+  }
+}
+
+// Palabra → imagen: cuadrícula 2x2 que cabe en pantallas bajas.
+.image-options {
+  display: grid;
+  // minmax(0, …): con 1fr, Safari ensancha cada columna hasta el tamaño real del GIF y la cuadrícula se sale de la pantalla.
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: min(100%, 46vh);
+}
+
+.image-option {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 3px solid #ffffff;
+  border-radius: 18px;
+  background: #e7ebf2;
+  box-shadow: 0 10px 24px rgba(35, 42, 52, 0.1);
+
+  // Fuera del flujo: el tamaño de la opción lo marca la cuadrícula, nunca el GIF.
+  img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 15px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+
+    &.ready {
+      opacity: 1;
+    }
+  }
+
+  .image-missing {
+    color: #8a929e;
+    font-size: 2rem;
+  }
+
+  .option-caption {
+    position: absolute;
+    right: 6px;
+    bottom: 6px;
+    left: 6px;
+    padding: 4px 8px;
+    border-radius: 10px;
+    background: rgba(32, 36, 43, 0.74);
+    color: #ffffff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+}
+
+// Imagen → palabra.
+.word-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+
+.word-option {
+  min-height: 58px;
+  padding: 10px 12px;
+  border: 2px solid rgba(35, 42, 52, 0.08);
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(35, 42, 52, 0.06);
+  color: #20242b;
+  font-size: 1.02rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+
+  &[data-state='correct'] {
+    background: rgba(var(--ion-color-success-rgb), 0.12);
+    color: var(--ion-color-success-shade);
+  }
+
+  &[data-state='wrong'] {
+    background: rgba(var(--ion-color-danger-rgb), 0.1);
+    color: var(--ion-color-danger);
+  }
+}

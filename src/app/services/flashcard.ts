@@ -1,9 +1,10 @@
 import { Injectable } from '@angular/core';
 import { Flashcard } from './flashcard.model';
 import { GeminiService } from './gemini';
-import { KlipyService } from './klipy';
-import { StudySetRepository, currentImageSearchVersion } from './study-set-repository';
+import { CardImageService } from './card-images';
+import { StudySetRepository } from './study-set-repository';
 import { toTopicKey } from './topic-key';
+import { EnglishLevel } from './english-level';
 
 export type { Flashcard } from './flashcard.model';
 
@@ -15,6 +16,8 @@ export interface TopicResult {
 export interface TopicProgress {
   // Palabras acertadas en su último repaso o ya aprendidas.
   known: number;
+  // Palabras aún sin aprender: las que se pueden practicar sin pedir nuevas.
+  pending: number;
   total: number;
 }
 
@@ -25,7 +28,7 @@ const reviewIntervalDays = [1, 3, 7, 14, 30];
 export class FlashcardService {
   constructor(
     private gemini: GeminiService,
-    private klipy: KlipyService,
+    private images: CardImageService,
     private studySets: StudySetRepository
   ) {}
 
@@ -45,60 +48,109 @@ export class FlashcardService {
     return newTopics.filter(topic => !this.hasTopic(excludedTopics, topic));
   }
 
-  async generateFlashcards(topic: string, count: number): Promise<Flashcard[]> {
-    const storedStudySet = await this.studySets.get(topic);
-    const storedCards = storedStudySet?.cards ?? [];
-    const dueCards = this.getDueCards(storedCards);
-
-    if (dueCards.length >= count) {
-      if (storedStudySet?.imageSearchVersion === currentImageSearchVersion) {
-        const sessionCards = dueCards.slice(0, count);
-        const retriedCards = await this.klipy.retryMissingImages(sessionCards);
-        if (retriedCards.some((card, index) => card.imageUrl !== sessionCards[index].imageUrl)) {
-          await this.studySets.save(topic, this.klipy.fillImages(storedCards, retriedCards));
-        }
-        return retriedCards;
-      }
-
-      const migratedCards = await this.klipy.withImages(storedCards);
-      await this.studySets.save(topic, migratedCards);
-      return this.getDueCards(migratedCards).slice(0, count);
+  // Sesión de un tema. Si está guardado se arma solo con sus palabras: ni se piden nuevas a Gemini ni se vuelven a
+  // buscar sus imágenes. Un tema nuevo se crea con palabras nuevas.
+  // []: el tema está guardado y ya se saben todas sus palabras.
+  async prepareSession(topic: string, count: number, level: EnglishLevel): Promise<Flashcard[]> {
+    const stored = await this.studySets.get(topic);
+    if (!stored?.cards.length) {
+      return this.addWords(topic, count, level);
     }
+    return this.completeCards(topic, this.pickSessionCards(stored.cards, count), level);
+  }
 
-    const existingWords = new Set(storedCards.map(card => card.word.toLowerCase()));
-    const suggestions = await this.gemini.suggestWords(topic, count - dueCards.length, existingWords);
-    const newCards: Flashcard[] = suggestions.map(suggestion => ({ ...suggestion, imageUrl: '' }));
+  // Palabras nuevas para el tema, con sus imágenes: lo único que pide palabras a Gemini y busca GIFs en Klipy.
+  // El nivel solo afecta a las nuevas; las ya guardadas se mantienen.
+  async addWords(topic: string, count: number, level: EnglishLevel): Promise<Flashcard[]> {
+    const stored = await this.studySets.get(topic);
+    const existingWords = new Set((stored?.cards ?? []).map(card => card.word.toLowerCase()));
+    const suggestions = await this.gemini.suggestWords(topic, count, existingWords, level);
 
     // Si Gemini devuelve menos palabras de las pedidas, la sesión simplemente es más corta.
-    if (!newCards.length && !dueCards.length) {
+    if (!suggestions.length) {
       throw new Error('Gemini no devolvio palabras validas');
     }
 
-    const retriedDueCards = await this.klipy.retryMissingImages(dueCards);
-    const newCardsWithImages = await this.klipy.withImages(newCards);
-
-    const allCards = [...this.klipy.fillImages(storedCards, retriedDueCards), ...newCardsWithImages];
-    await this.studySets.save(topic, allCards);
-    return [...retriedDueCards, ...newCardsWithImages];
+    const newCards = await this.images.withImages(suggestions.map(suggestion => ({ ...suggestion, imageUrl: '' })));
+    if (stored) {
+      await this.studySets.updateCards(topic, cards => [...cards, ...newCards]);
+    } else {
+      await this.studySets.save(topic, newCards);
+    }
+    return newCards;
   }
 
-  // null: el tema no está guardado. []: no hay repasos pendientes ni palabras nuevas por estudiar.
-  async getStoredFlashcards(topic: string, count: number): Promise<Flashcard[] | null> {
-    const record = await this.studySets.get(topic);
-    if (!record) return null;
-    return this.getDueCards(record.cards).slice(0, count);
+  // Primero lo que toca hoy; si no llega a `count`, se adelantan los próximos repasos (acertarlos no mueve su
+  // calendario, ver applyAnswer). Las aprendidas no vuelven.
+  private pickSessionCards(cards: Flashcard[], count: number): Flashcard[] {
+    const now = new Date().toISOString();
+    const upcoming = cards
+      .filter(card => !card.learned && card.nextReview && card.nextReview > now)
+      .sort((a, b) => (a.nextReview ?? '').localeCompare(b.nextReview ?? ''));
+    return [...this.getDueCards(cards), ...upcoming].slice(0, count);
   }
 
-  async recordAnswer(topic: string, word: string, knew: boolean): Promise<void> {
+  // Completa lo que les falte a las tarjetas de la sesión (imagen o frase de ejemplo) y lo guarda, para no volver a pedirlo.
+  private async completeCards(topic: string, cards: Flashcard[], level: EnglishLevel): Promise<Flashcard[]> {
+    const completed = await this.fillMissingExamples(await this.images.retryMissingImages(cards), level);
+    const changes = new Map(completed.filter((card, index) => card !== cards[index]).map(card => [card.word, card]));
+    if (changes.size) {
+      // Solo lo buscado: el progreso es el que esté guardado.
+      await this.studySets.updateCards(topic, storedCards => storedCards.map(card => {
+        const change = changes.get(card.word);
+        return change
+          ? { ...card, imageUrl: change.imageUrl, imageSearchedAt: change.imageSearchedAt, example: change.example }
+          : card;
+      }));
+    }
+    return completed;
+  }
+
+  // Pide a Gemini las frases de ejemplo que falten (temas guardados antes de existir). Las que no devuelva quedan vacías
+  // para no volver a pedirlas; si la consulta falla, la sesión sigue sin ellas y se reintenta en la próxima.
+  private async fillMissingExamples(cards: Flashcard[], level: EnglishLevel): Promise<Flashcard[]> {
+    const words = cards.filter(card => card.example === undefined).map(card => card.word);
+    if (!words.length) return cards;
+
+    try {
+      const examples = await this.gemini.suggestExamples(words, level);
+      if (!examples.size) return cards;
+
+      return cards.map(card => card.example === undefined
+        ? { ...card, example: examples.get(card.word.toLowerCase()) ?? '' }
+        : card);
+    } catch (error) {
+      console.warn('No se pudieron completar las frases de ejemplo', error);
+      return cards;
+    }
+  }
+
+  // Todas las palabras del tema, también las aprendidas: sirven de opciones en los ejercicios.
+  async getTopicCards(topic: string): Promise<Flashcard[]> {
+    return (await this.studySets.get(topic))?.cards ?? [];
+  }
+
+  // Devuelve la tarjeta tal como estaba antes de responder, para poder deshacer con restoreCard.
+  async recordAnswer(topic: string, word: string, knew: boolean): Promise<Flashcard | undefined> {
+    let previous: Flashcard | undefined;
+    await this.studySets.updateCards(topic, cards => cards.map(card => {
+      if (card.word !== word) return card;
+      previous = card;
+      return this.applyAnswer(card, knew);
+    }));
+    return previous;
+  }
+
+  async restoreCard(topic: string, previous: Flashcard): Promise<void> {
     await this.studySets.updateCards(topic, cards => cards.map(card =>
-      card.word === word ? this.applyAnswer(card, knew) : card
+      card.word === previous.word ? previous : card
     ));
   }
 
-  // Mantiene las palabras e imágenes, pero todas vuelven a ser nuevas.
+  // Mantiene las palabras, imágenes, ejemplos y búsquedas, pero todas vuelven a ser nuevas.
   async resetTopic(topic: string): Promise<void> {
-    await this.studySets.updateCards(topic, cards => cards.map(({ word, translation, imageUrl }) =>
-      ({ word, translation, imageUrl })
+    await this.studySets.updateCards(topic, cards => cards.map(({ word, translation, imageUrl, example, imageQuery }) =>
+      ({ word, translation, imageUrl, example, imageQuery })
     ));
   }
 
@@ -107,6 +159,7 @@ export class FlashcardService {
     const studySets = await this.studySets.getAll();
     return new Map(studySets.map(studySet => [toTopicKey(studySet.topic), {
       known: studySet.cards.filter(card => card.learned || (card.box ?? 0) >= 1).length,
+      pending: studySet.cards.filter(card => !card.learned).length,
       total: studySet.cards.length
     }]));
   }

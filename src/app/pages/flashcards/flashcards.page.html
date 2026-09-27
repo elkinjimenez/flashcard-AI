@@ -25,21 +25,33 @@
     <span>Cargando tus tarjetas...</span>
   </div>
 
-  <p class="cards-error" *ngIf="!loading && loadingError && !allLearned" role="alert">
+  <p class="cards-error" *ngIf="!loading && loadingError" role="alert">
     No se pudieron cargar las tarjetas.
   </p>
 
-  <app-all-learned *ngIf="!loading && allLearned" (exit)="exitStudy()"></app-all-learned>
-
   <app-session-summary *ngIf="summary" [summary]="summary" (reviewHard)="reviewHardCards()"
-    (exit)="exitStudy()"></app-session-summary>
+    (undo)="undo()" (exit)="exitStudy()"></app-session-summary>
 
-  <div class="card-scene" *ngIf="!loading && !loadingError && !summary && currentCard as card"
+  <app-quiz-card class="quiz-scene" *ngIf="!loading && !loadingError && !summary && quizKind as kind"
+    [kind]="kind" [card]="currentCard!" [options]="quizOptions" [choice]="quizChoice" [revealed]="exerciseAnswered"
+    [attr.data-motion]="cardMotion" (animationend)="onCardAnimationEnd($event)"
+    (choose)="chooseQuizOption($event)" (speak)="speak(currentCard!.word)"
+    (imageError)="onExerciseImageError()"></app-quiz-card>
+
+  <app-speak-card class="quiz-scene" *ngIf="!loading && !loadingError && !summary && exercise === 'speak'"
+    [card]="currentCard!" [round]="exerciseRound"
+    [attr.data-motion]="cardMotion" (animationend)="onCardAnimationEnd($event)"
+    (answered)="onSpeakAnswered($event)" (speak)="speak(currentCard!.word)"
+    (unavailable)="onSpeechUnavailable($event)" (imageError)="onExerciseImageError()"></app-speak-card>
+
+  <div class="card-scene" *ngIf="!loading && !loadingError && !summary && exercise === 'card' && currentCard as card"
        tabindex="0" role="group" aria-roledescription="tarjeta"
-       [attr.aria-label]="isFlipped ? card.word + ': ' + card.translation : card.word"
+       [attr.aria-label]="cardAriaLabel"
        aria-describedby="card-hint" aria-keyshortcuts="Enter Space ArrowLeft ArrowRight"
        [class.dragging]="isDragging"
+       [attr.data-motion]="cardMotion"
        [style.transform]="cardTransform"
+       (animationend)="onCardAnimationEnd($event)"
        (keydown)="onCardKeydown($event)"
        (pointerdown)="onPointerDown($event)"
        (pointermove)="onPointerMove($event)"
@@ -51,9 +63,10 @@
     <div class="swipe-indicator right" [class.active]="swipeDirection === 'right'" aria-hidden="true">
       <span class="seal-stamp">La sé</span>
     </div>
-    <div class="card-flip" [class.flipped]="isFlipped">
+    <div class="card-flip" [class.flipped]="isFlipped" [class.instant]="instantFlip">
 
       <!-- La cara que no se ve queda inerte: ni el lector de pantalla ni el tabulador llegan a ella. -->
+      <!-- El frente no muestra la palabra: se trata de reconocerla por la imagen. -->
       <div class="card-face card-front" [attr.inert]="isFlipped ? '' : null">
         <div class="image-stage" [class.ready]="imageLoaded">
           <div class="image-fallback" *ngIf="imageUnavailable">
@@ -62,40 +75,99 @@
           </div>
           <ng-container *ngIf="!imageUnavailable">
             <span class="image-loading" *ngIf="!imageLoaded">Cargando imagen...</span>
-            <img [src]="card.imageUrl" [alt]="card.word" draggable="false" (load)="onImageLoaded()" (error)="onImageError()" />
+            <!-- alt vacío: el texto alternativo delataría la palabra; la tarjeta ya tiene su aria-label. -->
+            <img [src]="card.imageUrl" alt="" draggable="false" (load)="onImageLoaded()" (error)="onImageError()" />
           </ng-container>
         </div>
-        <div class="word-label">{{ card.word }}</div>
+        <!-- Sin imagen no hay nada que adivinar: se muestra la palabra. -->
+        <div class="word-label" *ngIf="imageUnavailable; else prompt">{{ card.word }}</div>
+        <ng-template #prompt>
+          <div class="front-prompt">¿Qué palabra es?</div>
+        </ng-template>
       </div>
 
       <div class="card-face card-back" [attr.inert]="isFlipped ? null : ''">
-        <span class="back-type">Traducción</span>
+        <span class="back-type">En inglés</span>
         <span class="word-en">{{ card.word }}</span>
-        <span class="back-divider" aria-hidden="true"></span>
-        <span class="translation">{{ card.translation }}</span>
         <ion-button fill="clear" class="speak-button" (click)="speak(card.word); $event.stopPropagation()"
           (pointerdown)="$event.stopPropagation()"
           (pointerup)="$event.stopPropagation()"
           aria-label="Escuchar pronunciación">
           <ion-icon name="volume-high-outline" slot="icon-only"></ion-icon>
         </ion-button>
-        <span class="speak-label">Escuchar pronunciación</span>
+        <p class="example" *ngIf="card.example">
+          <ng-container *ngFor="let part of exampleParts; let odd = odd">
+            <strong *ngIf="odd">{{ part }}</strong>
+            <ng-container *ngIf="!odd">{{ part }}</ng-container>
+          </ng-container>
+        </p>
+        <button type="button" class="translation-toggle" [class.revealed]="showTranslation"
+          [attr.aria-pressed]="showTranslation"
+          (click)="showTranslation = !showTranslation; $event.stopPropagation()"
+          (pointerdown)="$event.stopPropagation()"
+          (pointerup)="$event.stopPropagation()">
+          <ion-icon aria-hidden="true" [name]="showTranslation ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+          {{ showTranslation ? card.translation : 'Ver en español' }}
+        </button>
       </div>
 
     </div>
   </div>
 
-  <div class="hint" *ngIf="!loading && !loadingError && !summary">
+  <div class="hint" *ngIf="!loading && !loadingError && !summary && exercise === 'card'">
     <span class="hint-line"></span>
-    <span id="card-hint">Toca para traducir · ← Difícil · La sé →</span>
+    <span id="card-hint">{{ cardHint }}</span>
     <span class="hint-line"></span>
   </div>
 
-  <div class="bottom-section" *ngIf="!loading && !loadingError && !summary">
-    <ion-button expand="block" size="large" class="next-btn" (click)="next()">
-      {{ currentIndex < cards.length - 1 ? 'Siguiente' : 'Terminar' }}
-      <ion-icon slot="end" name="arrow-forward-outline"></ion-icon>
-    </ion-button>
+  <!-- Solo lo que toca hacer ahora; tras responder un ejercicio se tiñe con el resultado. -->
+  <div class="action-bar" *ngIf="!loading && !loadingError && !summary">
+    <div class="action-panel" [attr.data-result]="exerciseAnswered ? (exerciseResult ? 'correct' : 'wrong') : null">
+      <!-- Siempre presente (aunque vacío) para que el lector de pantalla anuncie el resultado. -->
+      <p class="feedback" aria-live="polite">
+        <ng-container *ngIf="exerciseAnswered">
+          <ion-icon [name]="exerciseResult ? 'checkmark-circle' : 'refresh-circle'" aria-hidden="true"></ion-icon>
+          {{ exerciseResult ? '¡Correcto!' : 'La repasarás al final de la sesión' }}
+        </ng-container>
+      </p>
+
+      <div class="actions">
+        <ion-button size="large" fill="outline" class="undo-btn" [disabled]="!canUndo" (click)="undo()"
+          aria-label="Volver a la tarjeta anterior" title="Volver a la tarjeta anterior">
+          <ion-icon slot="icon-only" name="arrow-undo-outline"></ion-icon>
+        </ion-button>
+
+        <ng-container [ngSwitch]="actionMode">
+          <ion-button *ngSwitchCase="'flip'" expand="block" size="large" class="main-btn" (click)="flip()">
+            <ion-icon slot="start" name="eye-outline" aria-hidden="true"></ion-icon>
+            Ver palabra
+          </ion-button>
+
+          <ng-container *ngSwitchCase="'rate'">
+            <ion-button expand="block" size="large" fill="outline" class="rate-btn hard" (click)="answer(false)">
+              <ion-icon slot="start" name="close" aria-hidden="true"></ion-icon>
+              Difícil
+            </ion-button>
+            <ion-button expand="block" size="large" class="rate-btn knew" (click)="answer(true)">
+              <ion-icon slot="start" name="checkmark" aria-hidden="true"></ion-icon>
+              La sé
+            </ion-button>
+          </ng-container>
+
+          <ion-button *ngSwitchCase="'give-up'" expand="block" size="large" fill="outline" class="give-up-btn"
+            (click)="giveUp()">
+            No lo sé
+          </ion-button>
+
+          <!-- Con acierto se llena mientras espera a avanzar solo. -->
+          <ion-button *ngSwitchCase="'continue'" expand="block" size="large" class="main-btn continue-btn"
+            [class.auto]="autoAdvanceMs" [style.--auto-advance]="autoAdvanceMs + 'ms'" (click)="advance()">
+            Continuar
+            <ion-icon slot="end" name="arrow-forward-outline" aria-hidden="true"></ion-icon>
+          </ion-button>
+        </ng-container>
+      </div>
+    </div>
   </div>
 
 </ion-content>

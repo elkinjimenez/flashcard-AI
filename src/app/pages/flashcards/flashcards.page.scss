@@ -102,6 +102,62 @@ ion-toolbar {
   }
 }
 
+// Cambio de tarjeta, igual en tarjetas y ejercicios.
+.card-scene,
+.quiz-scene {
+  // Pasar de tarjeta: se retira hacia arriba y la nueva sube desde detrás.
+  &[data-motion='leave'] {
+    animation: card-leave 0.25s ease-in forwards;
+  }
+
+  &[data-motion='enter'] {
+    animation: card-enter 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  // Volver atrás: el mismo movimiento al revés (la tarjeta baja y la anterior vuelve desde arriba).
+  &[data-motion='leave-back'] {
+    animation: card-leave-back 0.25s ease-in forwards;
+  }
+
+  &[data-motion='enter-back'] {
+    animation: card-enter-back 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &[data-motion] {
+      animation: none;
+    }
+  }
+}
+
+@keyframes card-leave {
+  to {
+    opacity: 0;
+    transform: translateY(-36px) scale(0.92);
+  }
+}
+
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(28px) scale(0.94);
+  }
+}
+
+@keyframes card-leave-back {
+  to {
+    opacity: 0;
+    transform: translateY(28px) scale(0.94);
+  }
+}
+
+@keyframes card-enter-back {
+  from {
+    opacity: 0;
+    transform: translateY(-36px) scale(0.92);
+  }
+}
+
 .swipe-indicator {
   position: absolute;
   top: 20px;
@@ -227,6 +283,10 @@ ion-toolbar {
   &.flipped {
     transform: rotateY(180deg);
   }
+
+  &.instant {
+    transition: none;
+  }
 }
 
 .card-face {
@@ -305,6 +365,13 @@ ion-toolbar {
     font-weight: 700;
     padding: 12px 18px 20px;
   }
+
+  .front-prompt {
+    padding: 18px 18px 26px;
+    color: #8a929e;
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
 }
 
 .card-back {
@@ -327,22 +394,6 @@ ion-toolbar {
     text-transform: uppercase;
   }
 
-  .translation {
-    max-width: 86%;
-    color: rgba(255, 255, 255, 0.78);
-    font-size: 1em;
-    font-weight: 600;
-    text-align: center;
-  }
-
-  .back-divider {
-    width: 34px;
-    height: 2px;
-    margin: 4px 0;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.48);
-  }
-
   .word-en {
     max-width: 90%;
     font-size: clamp(1.8rem, 8vw, 2.5rem);
@@ -354,7 +405,7 @@ ion-toolbar {
   .speak-button {
     width: 56px;
     height: 56px;
-    margin-top: 18px;
+    margin-top: 4px;
     --background: rgba(255, 255, 255, 0.16);
     --border-radius: 50%;
     --color: #ffffff;
@@ -363,10 +414,56 @@ ion-toolbar {
     font-size: 1.3rem;
   }
 
-  .speak-label {
-    color: rgba(255, 255, 255, 0.68);
-    font-size: 0.68rem;
-    font-weight: 600;
+  .example {
+    max-width: 84%;
+    margin: 8px 0 0;
+    padding: 12px 16px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.45;
+    text-align: center;
+
+    strong {
+      color: #ffffff;
+      font-weight: 800;
+    }
+  }
+
+  .translation-toggle {
+    position: absolute;
+    bottom: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 86%;
+    padding: 8px 14px;
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    border-radius: 999px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.78);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+
+    &.revealed {
+      border-color: transparent;
+      background: #ffffff;
+      color: var(--ion-color-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid #ffffff;
+      outline-offset: 2px;
+    }
+
+    ion-icon {
+      flex-shrink: 0;
+      font-size: 1rem;
+    }
   }
 }
 
@@ -389,20 +486,156 @@ ion-toolbar {
   background: rgba(111, 119, 132, 0.3);
 }
 
-.bottom-section {
+.action-bar {
   margin-top: auto;
-  padding: 22px 0 8px;
+  padding-top: 22px;
 }
 
-.next-btn {
-  margin-top: 0;
-  --background: var(--ion-color-primary);
-  --border-radius: 16px;
-  --box-shadow: 0 12px 26px rgba(var(--ion-color-primary-rgb), 0.28);
-  --color: #ffffff;
-  --background-hover: var(--ion-color-primary-shade);
-  --background-activated: var(--ion-color-primary-shade);
-  --background-focused: var(--ion-color-primary);
+// Sobresale un poco del contenido para que, teñido, los botones sigan alineados con la tarjeta.
+.action-panel {
+  margin: 0 -8px;
+  padding: 0 8px 8px;
+  border-radius: 24px;
+  transition: background 0.25s ease, padding 0.25s ease;
+
+  &[data-result] {
+    padding-top: 12px;
+  }
+
+  &[data-result='correct'] {
+    background: rgba(var(--ion-color-success-rgb), 0.14);
+  }
+
+  &[data-result='wrong'] {
+    background: rgba(var(--ion-color-danger-rgb), 0.1);
+  }
+}
+
+// Plegada mientras no hay resultado; no se oculta del todo para que siga siendo región viva.
+.feedback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-height: 0;
+  margin: 0 4px;
+  overflow: hidden;
+  opacity: 0;
+  font-size: 1rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  transition: max-height 0.25s ease, margin 0.25s ease, opacity 0.2s ease;
+
+  ion-icon {
+    flex-shrink: 0;
+    font-size: 1.5rem;
+  }
+
+  [data-result] > & {
+    max-height: 3em;
+    margin-bottom: 12px;
+    opacity: 1;
+  }
+
+  [data-result='correct'] > & {
+    color: var(--ion-color-success-shade);
+  }
+
+  [data-result='wrong'] > & {
+    color: var(--ion-color-danger);
+  }
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+
+  ion-button {
+    margin: 0;
+    --border-radius: 16px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+  }
+
+  // Todos los botones de acción se reparten el ancho; deshacer mantiene el suyo.
+  ion-button:not(.undo-btn) {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.undo-btn {
+  flex-shrink: 0;
+  width: 58px;
+  --border-color: rgba(var(--ion-color-primary-rgb), 0.35);
+  --border-width: 1.5px;
+  --color: var(--ion-color-primary);
+  --padding-start: 0;
+  --padding-end: 0;
+}
+
+@mixin solid-button($color) {
+  --background: var(--ion-color-#{$color});
+  --background-hover: var(--ion-color-#{$color}-shade);
+  --background-activated: var(--ion-color-#{$color}-shade);
+  --background-focused: var(--ion-color-#{$color});
+  --box-shadow: 0 12px 26px rgba(var(--ion-color-#{$color}-rgb), 0.28);
+  --color: #ffffff;
+}
+
+.main-btn {
+  @include solid-button(primary);
+}
+
+// Mismos colores que los sellos de deslizar.
+.rate-btn.knew {
+  @include solid-button(success);
+}
+
+.rate-btn.hard {
+  --border-color: rgba(var(--ion-color-danger-rgb), 0.45);
+  --border-width: 1.5px;
+  --color: var(--ion-color-danger);
+  --background-hover: rgba(var(--ion-color-danger-rgb), 0.08);
+}
+
+.give-up-btn {
+  --border-color: rgba(35, 42, 52, 0.18);
+  --border-width: 1.5px;
+  --color: #5d6571;
+}
+
+// Continuar toma el color del resultado.
+[data-result='correct'] .continue-btn {
+  @include solid-button(success);
+}
+
+[data-result='wrong'] .continue-btn {
+  @include solid-button(danger);
+}
+
+// Tras acertar, una franja se llena durante la espera antes de avanzar solo.
+.continue-btn.auto {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.55);
+    transform-origin: left;
+    animation: auto-advance var(--auto-advance) linear forwards;
+    pointer-events: none;
+  }
+}
+
+@keyframes auto-advance {
+  from {
+    transform: scaleX(0);
+  }
+
+  to {
+    transform: scaleX(1);
+  }
 }

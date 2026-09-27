@@ -10,10 +10,6 @@
       <strong>{{ summary.hard }}</strong>
       <span>Difíciles</span>
     </div>
-    <div class="stat" *ngIf="summary.skipped">
-      <strong>{{ summary.skipped }}</strong>
-      <span>Saltadas</span>
-    </div>
   </div>
 
   <p class="message">{{ message }}</p>
@@ -22,4 +18,8 @@
     Repasar difíciles ({{ summary.hard }})
   </ion-button>
   <ion-button expand="block" fill="clear" class="exit-btn" (click)="exit.emit()">Elegir otro tema</ion-button>
+  <ion-button fill="clear" size="small" class="undo-btn" (click)="undo.emit()">
+    <ion-icon slot="start" name="arrow-undo-outline" aria-hidden="true"></ion-icon>
+    Volver a la última tarjeta
+  </ion-button>
 </div>

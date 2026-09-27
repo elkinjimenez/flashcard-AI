@@ -1,0 +1,51 @@
+<div class="speak">
+  <span class="exercise-instruction">Dilo en voz alta</span>
+
+  <div class="exercise-image">
+    <!-- alt vacío: el texto alternativo delataría la palabra. -->
+    <img *ngIf="!imageFailed" [src]="card.imageUrl" alt="" draggable="false" [class.ready]="imageLoaded"
+      (load)="imageLoaded = true" (error)="onImageError()" />
+    <div class="image-fallback" *ngIf="imageFailed">
+      <ion-icon name="image-outline" aria-hidden="true"></ion-icon>
+      <span>Sin imagen</span>
+    </div>
+
+    <button type="button" class="hint-button" *ngIf="!done && hintsShown < hints.length" (click)="showHint()">
+      <ion-icon name="bulb-outline" aria-hidden="true"></ion-icon>
+      {{ hintsShown ? 'Otra pista' : 'Pista' }}
+    </button>
+    <!-- Siempre presente para que el lector de pantalla anuncie cada pista. -->
+    <ul class="hints" aria-live="polite">
+      <li *ngFor="let hint of hints.slice(0, hintsShown)" [class.letters]="hint.letters">
+        <span class="hint-label">{{ hint.label }}</span>
+        <span class="hint-text">{{ hint.text }}</span>
+      </li>
+    </ul>
+  </div>
+
+  <ng-container *ngIf="!done; else result">
+    <button type="button" class="mic-button" [class.listening]="state === 'listening'"
+      [disabled]="state === 'blocked'" [attr.aria-label]="state === 'listening' ? 'Escuchando' : 'Decir la palabra'"
+      (click)="listen()">
+      <ion-icon name="mic" aria-hidden="true"></ion-icon>
+    </button>
+    <p class="speak-status" aria-live="polite">{{ state === 'listening' ? 'Escuchando…' : message }}</p>
+    <button type="button" class="decline" (click)="declineSpeaking()">Ahora no puedo hablar</button>
+  </ng-container>
+
+  <ng-template #result>
+    <div class="speak-result" [class.correct]="state === 'correct'" [class.wrong]="state === 'wrong'" aria-live="polite">
+      <!-- El veredicto lo da la barra de la página. Si valió otra forma (jumping), se enseña la exacta. -->
+      <span class="result-label">
+        {{ state === 'wrong' ? 'La palabra era' : heard ? 'La palabra exacta es' : 'Dijiste' }}
+      </span>
+      <div class="result-word">
+        <strong>{{ card.word }}</strong>
+        <ion-button fill="clear" class="speak-button" aria-label="Escuchar pronunciación" (click)="speak.emit()">
+          <ion-icon slot="icon-only" name="volume-high-outline"></ion-icon>
+        </ion-button>
+      </div>
+      <span class="result-heard" *ngIf="heard">Oí «{{ heard }}»{{ state === 'correct' ? ': también vale' : '' }}</span>
+    </div>
+  </ng-template>
+</div>
