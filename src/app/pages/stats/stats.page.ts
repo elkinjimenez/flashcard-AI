@@ -6,12 +6,13 @@ import {
   IonContent, IonSpinner, IonIcon, IonButton
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { bulbOutline, imageOutline, statsChartOutline } from 'ionicons/icons';
+import { bulbOutline, chevronForward, imageOutline, statsChartOutline } from 'ionicons/icons';
 import { DailyActivity } from 'src/app/services/study-set-repository';
 import { HardWord, Stats, StatsService, TopicStats, WordStage } from 'src/app/services/stats';
 import { FlashcardService } from 'src/app/services/flashcard';
 import { mnemonicMisses } from 'src/app/services/flashcard.model';
 import { describeRequestError } from 'src/app/services/request-error';
+import { toTopicKey } from 'src/app/services/topic-key';
 import { ToastService } from 'src/app/services/toast';
 
 const weekdayInitials = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
@@ -54,8 +55,8 @@ export class StatsPage {
   creatingMnemonics = new Set<HardWord>();
 
   constructor() {
-    addIcons({ bulbOutline, imageOutline, statsChartOutline });
-    this.flashcardService.sessionEnded.pipe(takeUntilDestroyed()).subscribe(() => this.load());
+    addIcons({ bulbOutline, chevronForward, imageOutline, statsChartOutline });
+    this.flashcardService.cardsChanged.pipe(takeUntilDestroyed()).subscribe(() => this.load());
   }
 
   // Normalmente se crea al fallarla en la práctica; las que ya costaban antes de existir el truco lo piden aquí.
@@ -133,6 +134,11 @@ export class StatsPage {
 
   topicPercent(topic: TopicStats): number {
     return topic.known / topic.total * 100;
+  }
+
+  // Para abrir la lista de sus palabras.
+  topicKey(topic: TopicStats): string {
+    return toTopicKey(topic.topic);
   }
 
   count(value: number, singular: string, plural: string): string {

@@ -20,6 +20,7 @@ import {
   bookmarkOutline,
   sparklesOutline,
   arrowForwardOutline,
+  listOutline,
   refresh
 } from 'ionicons/icons';
 import { registerTopicIcons, topicIcon } from 'src/app/services/topic-icon';
@@ -85,9 +86,9 @@ export class StudySetupPage implements OnInit {
   level: EnglishLevel = loadEnglishLevel();
 
   constructor() {
-    addIcons({ checkmarkCircle, bookmarkOutline, sparklesOutline, arrowForwardOutline, refresh });
+    addIcons({ checkmarkCircle, bookmarkOutline, sparklesOutline, arrowForwardOutline, listOutline, refresh });
     registerTopicIcons();
-    this.flashcardService.sessionEnded.pipe(takeUntilDestroyed()).subscribe(() => this.ionViewWillEnter());
+    this.flashcardService.cardsChanged.pipe(takeUntilDestroyed()).subscribe(() => this.ionViewWillEnter());
   }
 
   async ngOnInit() {
@@ -202,6 +203,17 @@ export class StudySetupPage implements OnInit {
     const topic = this.menuTopic;
     this.closeTopicMenu();
     if (topic) await this.deleteTopic(topic);
+  }
+
+  showSelectedTopicWords() {
+    const topic = this.menuTopic;
+    this.closeTopicMenu();
+    if (topic) this.showWords(topic);
+  }
+
+  // Pantalla completa, como la práctica. Lo que se cambie allí llega aquí por cardsChanged.
+  showWords(topic: Topic) {
+    this.router.navigate(['/topic-words', topic.id], { state: { returnUrl: '/tabs/topics' } });
   }
 
   async resetSelectedTopic() {

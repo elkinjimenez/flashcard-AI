@@ -44,14 +44,14 @@
   <section aria-labelledby="word-title">
     <h2 class="section-title" id="word-title">Palabra del día</h2>
     <div class="word-card">
-      <div class="word-row">
+      <div class="word-text">
         <strong lang="en">{{ wordOfTheDay.word }}</strong>
-        <ion-button fill="clear" class="speak-button" aria-label="Escuchar pronunciación" title="Escuchar pronunciación"
-          (click)="speakWordOfTheDay()">
-          <ion-icon slot="icon-only" name="volume-high-outline"></ion-icon>
-        </ion-button>
+        <span>{{ wordOfTheDay.translation }}</span>
       </div>
-      <span>{{ wordOfTheDay.translation }}</span>
+      <ion-button fill="clear" class="speak-button" aria-label="Escuchar pronunciación" title="Escuchar pronunciación"
+        (click)="speakWordOfTheDay()">
+        <ion-icon slot="icon-only" name="volume-high-outline"></ion-icon>
+      </ion-button>
     </div>
   </section>
 

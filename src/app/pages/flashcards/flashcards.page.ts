@@ -11,7 +11,7 @@ import {
 } from 'ionicons/icons';
 import { AnswerRecord, Flashcard, FlashcardService } from 'src/app/services/flashcard';
 import { isNewCard, mnemonicMisses } from 'src/app/services/flashcard.model';
-import { SessionSummary, SessionSummaryComponent } from './session-summary/session-summary.component';
+import { SessionSummary, SessionSummaryComponent, SummaryWord } from './session-summary/session-summary.component';
 import { QuizCardComponent, QuizKind } from './quiz-card/quiz-card.component';
 import { SpeakCardComponent, SpeechUnavailableReason } from './speak-card/speak-card.component';
 import { IntroCardComponent } from './intro-card/intro-card.component';
@@ -22,6 +22,7 @@ import { SpeechRecognitionService } from 'src/app/services/speech-recognition';
 import { isSameWord, wordPattern } from 'src/app/services/word-forms';
 import { ToastService } from 'src/app/services/toast';
 import { PronunciationService } from 'src/app/services/pronunciation';
+import { StatsService, Streak } from 'src/app/services/stats';
 
 // Los que se sortean. speak: ver la imagen y decir la palabra en voz alta. write: verla y escribirla.
 type DrawnExercise = 'card' | QuizKind | 'speak' | 'write';
@@ -126,6 +127,7 @@ export class FlashcardsPage {
   private modalController = inject(ModalController);
   private navController = inject(NavController);
   private pronunciation = inject(PronunciationService);
+  private statsService = inject(StatsService);
 
   cards: Flashcard[] = [];
   currentIndex = 0;
@@ -174,6 +176,8 @@ export class FlashcardsPage {
   private steps: SessionStep[] = [];
   // Las escrituras van en fila: deshacer debe restaurar después de que se guardó la respuesta y antes de la siguiente.
   private saveQueue: Promise<unknown> = Promise.resolve();
+  // Racha al empezar: el resumen dice si la sesión le sumó un día o batió el récord. undefined si no se pudo leer.
+  private streakAtStart?: Streak;
   topic = '';
   // Pestaña a la que se vuelve al salir (la que abrió la sesión).
   private returnUrl = '/tabs/topics';
@@ -221,6 +225,10 @@ export class FlashcardsPage {
     this.cardMotion = null;
     this.sessionResults.clear();
     this.steps = [];
+    this.streakAtStart = undefined;
+    this.statsService.getStreak()
+      .then(streak => this.streakAtStart = streak)
+      .catch(error => console.warn('No se pudo leer la racha', error));
 
     try {
       const plan = planSession(sessionCards);
@@ -717,7 +725,7 @@ export class FlashcardsPage {
 
   // Al salir de cualquier forma (también con el botón atrás de Android), cuando terminen de guardarse las respuestas.
   ionViewWillLeave() {
-    this.saveQueue.then(() => this.flashcardService.sessionEnded.next());
+    this.saveQueue.then(() => this.flashcardService.cardsChanged.next());
   }
 
   next() {
@@ -862,10 +870,54 @@ export class FlashcardsPage {
     const results = [...this.sessionResults.values()];
     const hard = results.filter(result => result === 'hard').length;
 
+    const summary: SessionSummary = { knew: results.length - hard, hard };
+    this.summary = summary;
+    this.completeSummary(summary, [...this.steps]);
+  }
+
+  // Las palabras y la racha, cuando se guarden las respuestas. Si mientras tanto se deshizo la última o se empezó la
+  // ronda de difíciles, ese resumen ya no está en pantalla.
+  private async completeSummary(summary: SessionSummary, steps: SessionStep[]) {
+    const words = await this.summaryWords(steps);
+    let streak: Streak | undefined;
+    try {
+      // Ya con las respuestas guardadas, que cuentan en la actividad del día.
+      streak = await this.statsService.getStreak();
+    } catch (error) {
+      console.warn('No se pudo leer la racha', error);
+    }
+    if (this.summary !== summary) return;
+
+    const before = this.streakAtStart;
     this.summary = {
-      knew: results.length - hard,
-      hard
+      ...summary,
+      words,
+      streak: streak && {
+        ...streak,
+        grew: !!before && streak.current > before.current,
+        record: !!before && streak.current > before.best
+      }
     };
+  }
+
+  // Por palabra: cómo estaba en su primera respuesta guardada y cómo quedó tras la última. Las que no se pudieron
+  // guardar no salen.
+  private async summaryWords(steps: SessionStep[]): Promise<SummaryWord[]> {
+    const records = await Promise.all(steps.map(step => step.saved));
+    const words = new Map<string, SummaryWord>();
+    records.forEach((record, index) => {
+      if (!record) return;
+      const { card, knew } = steps[index];
+      const first = words.get(card.word);
+      // La imagen, de la sesión: pudo cambiarse después de responder.
+      const imageUrl = this.cards.find(other => other.word === card.word)?.imageUrl ?? record.current.imageUrl;
+      words.set(card.word, {
+        card: { ...record.current, imageUrl },
+        before: first?.before ?? record.previous,
+        hard: (first?.hard ?? false) || !knew
+      });
+    });
+    return [...words.values()];
   }
 
   reviewHardCards() {

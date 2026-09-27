@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 
-// Pronunciación de palabras en inglés con la voz del sistema. Sin síntesis de voz, no suena nada.
+// Pronunciación de palabras (y textos) en inglés con la voz del sistema. Sin síntesis de voz, no suena nada.
 @Injectable({ providedIn: 'root' })
 export class PronunciationService {
   // interrupt: corta lo que esté sonando (el botón de escuchar); si no, se encola detrás (p. ej. tras la locución muda).
@@ -14,6 +14,32 @@ export class PronunciationService {
     }
     synthesizer.resume();
     synthesizer.speak(this.createUtterance(synthesizer, word));
+  }
+
+  // Un texto largo, frase a frase: en Chrome una locución larga se corta a los pocos segundos. Se resuelve al terminar de
+  // leerlo o al detenerlo (con stop o con otra locución).
+  speakText(text: string): Promise<void> {
+    const synthesizer = window.speechSynthesis;
+    const sentences = (text.match(/[^.!?\n]+[.!?]*/g) ?? []).map(sentence => sentence.trim()).filter(Boolean);
+    if (!synthesizer || !sentences.length) return Promise.resolve();
+
+    this.stop();
+    synthesizer.resume();
+    const utterances = sentences.map(sentence => this.createUtterance(synthesizer, sentence));
+    const finished = new Promise<void>(resolve => {
+      const last = utterances[utterances.length - 1];
+      last.onend = () => resolve();
+      last.onerror = () => resolve();
+    });
+    utterances.forEach(utterance => synthesizer.speak(utterance));
+    return finished;
+  }
+
+  stop() {
+    const synthesizer = window.speechSynthesis;
+    if (synthesizer && (synthesizer.speaking || synthesizer.pending)) {
+      synthesizer.cancel();
+    }
   }
 
   // En el móvil el audio se "duerme" tras un rato en silencio y se come el comienzo de la palabra. Una locución muda lo

@@ -1,4 +1,9 @@
 <div class="session-summary">
+  <!-- Celebración al terminar: la insignia aparece y suelta unas chispas. Solo decorativa. -->
+  <div class="celebration" aria-hidden="true">
+    <span class="spark" *ngFor="let spark of sparks"></span>
+    <span class="badge"><ion-icon name="checkmark"></ion-icon></span>
+  </div>
   <span class="title">¡Sesión terminada!</span>
 
   <div class="stats">
@@ -10,13 +15,61 @@
       <strong>{{ summary.hard }}</strong>
       <span>Difíciles</span>
     </div>
+    <div class="stat streak" *ngIf="streak as s">
+      <strong><ion-icon name="flame" aria-hidden="true"></ion-icon>{{ s.current }}</strong>
+      <span>{{ s.current === 1 ? 'Día de racha' : 'Días de racha' }}</span>
+      <span class="streak-note" [class.highlight]="s.grew">{{ streakNote }}</span>
+    </div>
   </div>
 
-  <p class="message">{{ message }}</p>
+  <p class="message" *ngIf="summary.hard">Repásalas ahora; también volverán en tus próximos repasos.</p>
 
   <ion-button *ngIf="summary.hard" expand="block" size="large" class="review-btn" (click)="reviewHard.emit()">
     Repasar difíciles ({{ summary.hard }})
   </ion-button>
+  <ion-button *ngIf="rows.length" expand="block" class="story-btn" [class.main]="!summary.hard" (click)="openStory()">
+    <ion-icon slot="start" name="book-outline" aria-hidden="true"></ion-icon>
+    Leer una mini-historia
+  </ion-button>
+
+  <section class="words" *ngIf="rows.length" aria-labelledby="summary-words-title">
+    <div class="words-heading">
+      <h2 id="summary-words-title">Tus palabras</h2>
+      <span class="level-ups" *ngIf="levelUps">
+        <ion-icon name="arrow-up" aria-hidden="true"></ion-icon>
+        {{ levelUps }} {{ levelUps === 1 ? 'subió' : 'subieron' }} de nivel
+      </span>
+    </div>
+    <ul>
+      <li class="word-row" *ngFor="let row of rows" [attr.data-outcome]="row.outcome">
+        <!-- crossorigin: así el service worker la guarda para verla sin conexión (ver ngsw-config.json). -->
+        <img *ngIf="row.card.imageUrl; else noImage" [src]="row.card.imageUrl" alt="" crossorigin="anonymous"
+          loading="lazy" />
+        <ng-template #noImage>
+          <span class="no-image"><ion-icon name="image-outline" aria-hidden="true"></ion-icon></span>
+        </ng-template>
+        <span class="word-text">
+          <strong lang="en">{{ row.card.word }}</strong>
+          <span>{{ row.card.translation }}</span>
+          <span class="returns" *ngIf="row.returns">
+            <ion-icon name="time-outline" aria-hidden="true"></ion-icon>{{ row.returns }}
+          </span>
+        </span>
+        <span class="level">
+          <span class="level-dots" role="img" [attr.aria-label]="levelLabel(row)">
+            <span class="dot" *ngFor="let dot of dots" [class.filled]="dot < row.level"
+              [class.gained]="row.outcome !== 'hard' && dot >= row.levelBefore && dot < row.level"></span>
+          </span>
+          <span class="status">
+            <ion-icon *ngIf="row.outcome === 'up'" name="arrow-up" aria-hidden="true"></ion-icon>
+            <ion-icon *ngIf="row.outcome === 'learned'" name="star" aria-hidden="true"></ion-icon>
+            <span class="visually-hidden" *ngIf="row.outcome === 'up'">Sube a </span>{{ row.status }}
+          </span>
+        </span>
+      </li>
+    </ul>
+  </section>
+
   <ion-button expand="block" fill="clear" class="exit-btn" (click)="exit.emit()">Terminar</ion-button>
   <ion-button fill="clear" size="small" class="undo-btn" (click)="undo.emit()">
     <ion-icon slot="start" name="arrow-undo-outline" aria-hidden="true"></ion-icon>

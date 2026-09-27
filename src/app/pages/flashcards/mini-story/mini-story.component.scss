@@ -1,0 +1,104 @@
+ion-content {
+  --background: #eef1f6;
+}
+
+.story-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 40vh;
+  color: var(--ion-color-medium);
+  text-align: center;
+}
+
+.story-error {
+  margin-top: 20vh;
+  color: var(--ion-color-danger);
+  text-align: center;
+
+  ion-button {
+    --border-radius: 14px;
+  }
+}
+
+.story {
+  padding: 20px 18px;
+  border: 1px solid rgba(35, 42, 52, 0.06);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(35, 42, 52, 0.04);
+  color: #20242b;
+
+  h2 {
+    margin: 0 0 12px;
+    color: var(--ion-color-primary);
+    font-size: 1.25rem;
+    font-weight: 800;
+  }
+
+  p {
+    margin: 0;
+    font-size: 1.05rem;
+    line-height: 1.65;
+  }
+
+  p + p {
+    margin-top: 12px;
+  }
+}
+
+// Las palabras de la sesión: se tocan para oírlas.
+.story-word {
+  padding: 0 3px;
+  border-radius: 6px;
+  background: rgba(var(--ion-color-primary-rgb), 0.12);
+  color: var(--ion-color-primary);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--ion-color-primary);
+    outline-offset: 1px;
+  }
+}
+
+.story-hint {
+  margin: 10px 4px 0;
+  color: var(--ion-color-medium);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.story-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+
+  ion-button {
+    flex: 1 1 140px;
+    --border-radius: 14px;
+    font-weight: 700;
+  }
+}
+
+.story-translation {
+  margin-top: 16px;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(35, 42, 52, 0.04);
+  color: #4d5561;
+
+  p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.55;
+  }
+
+  p + p {
+    margin-top: 10px;
+  }
+}

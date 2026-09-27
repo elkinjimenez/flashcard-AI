@@ -15,6 +15,12 @@ export interface TopicStats {
   due: number;
 }
 
+export interface Streak {
+  // Días seguidos practicando hasta hoy. Si hoy aún no practicó, cuenta hasta ayer: la racha sigue viva.
+  current: number;
+  best: number;
+}
+
 export interface HardWord extends Pick<Flashcard, 'word' | 'translation' | 'imageUrl' | 'mnemonic'> {
   misses: number;
   topic: string;
@@ -41,6 +47,13 @@ export interface Stats {
 
 const dayMs = 24 * 60 * 60 * 1000;
 
+// Nueva: aún no se respondió. Aprendiendo: cajas 0 a 2. Afianzada: cajas 3 a 5, a un paso de aprenderse.
+export function wordStage(card: Flashcard): WordStage {
+  if (card.learned) return 'learned';
+  if (isNewCard(card)) return 'new';
+  return (card.box ?? 0) >= 3 ? 'consolidating' : 'learning';
+}
+
 @Injectable({ providedIn: 'root' })
 export class StatsService {
   private studySets = inject(StudySetRepository);
@@ -53,10 +66,10 @@ export class StatsService {
 
     const stages: Record<WordStage, number> = { new: 0, learning: 0, consolidating: 0, learned: 0 };
     for (const { card } of cards) {
-      stages[this.stageOf(card)]++;
+      stages[wordStage(card)]++;
     }
 
-    const answersByDay = new Map(activity.filter(day => day.answers > 0).map(day => [day.date, day]));
+    const answersByDay = this.activeDays(activity);
     const week = Array.from({ length: 7 }, (_, index) => {
       const date = toDayKey(this.addDays(now, index - 6));
       return answersByDay.get(date) ?? { date, answers: 0, correct: 0 };
@@ -102,11 +115,15 @@ export class StatsService {
     };
   }
 
-  // Nueva: aún no se respondió. Aprendiendo: cajas 0 a 2. Afianzada: cajas 3 a 5, a un paso de aprenderse.
-  private stageOf(card: Flashcard): WordStage {
-    if (card.learned) return 'learned';
-    if (isNewCard(card)) return 'new';
-    return (card.box ?? 0) >= 3 ? 'consolidating' : 'learning';
+  // Solo la racha, sin leer las palabras: la muestra el resumen de la sesión.
+  async getStreak(now = new Date()): Promise<Streak> {
+    const answersByDay = this.activeDays(await this.studySets.getActivity());
+    return { current: this.currentStreak(answersByDay, now), best: this.bestStreak([...answersByDay.keys()]) };
+  }
+
+  // Días con alguna respuesta (deshacerlas puede dejar un día a 0), por su clave.
+  private activeDays(activity: DailyActivity[]): Map<string, DailyActivity> {
+    return new Map(activity.filter(day => day.answers > 0).map(day => [day.date, day]));
   }
 
   private currentStreak(answersByDay: Map<string, DailyActivity>, now: Date): number {

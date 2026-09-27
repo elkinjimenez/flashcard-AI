@@ -1,0 +1,188 @@
+// Etapas con la misma escala de azules que "Tus palabras" en Progreso.
+:host {
+  --text-primary: #20242b;
+  --text-secondary: #69717d;
+  --stage-new: #86b6ef;
+  --stage-learning: #3987e5;
+  --stage-consolidating: #1c5cab;
+  --stage-learned: #0d366b;
+}
+
+ion-content {
+  --background: #f4f5f7;
+  --padding-bottom: calc(28px + var(--ion-safe-area-bottom, 0px));
+}
+
+ion-toolbar {
+  --background: #ffffff;
+  --color: #303640;
+  --min-height: 62px;
+  --padding-end: 14px;
+  --padding-start: 4px;
+}
+
+ion-title {
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.toolbar-button {
+  --color: #303640;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  font-size: 1.2rem;
+}
+
+.words-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 40vh;
+  color: var(--ion-color-medium);
+}
+
+.words-error {
+  margin-top: 12vh;
+  color: var(--ion-color-danger);
+  text-align: center;
+}
+
+.words-empty {
+  margin-top: 12vh;
+  color: var(--text-secondary);
+  text-align: center;
+
+  ion-button {
+    --border-radius: 16px;
+  }
+}
+
+.words-summary {
+  margin: 4px 4px 0;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.words-hint {
+  margin: 4px 4px 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.words-search {
+  margin-top: 12px;
+  padding: 0;
+  --border-radius: 14px;
+  --background: #ffffff;
+  --box-shadow: none;
+}
+
+.word-list {
+  margin: 14px 0 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(35, 42, 52, 0.06);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(35, 42, 52, 0.04);
+  list-style: none;
+
+  li + li {
+    border-top: 1px solid #eef1f6;
+  }
+}
+
+.word-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:active {
+    background: #f4f5f7;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ion-color-primary);
+    outline-offset: -2px;
+  }
+
+  img,
+  .no-image {
+    flex-shrink: 0;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #e7ebf2;
+    object-fit: cover;
+  }
+}
+
+.no-image {
+  display: grid;
+  place-items: center;
+  color: #8a929e;
+  font-size: 1.3rem;
+}
+
+.word-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+
+  strong {
+    color: var(--text-primary);
+    font-size: 1rem;
+  }
+}
+
+.word-stage {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.swatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+[data-stage='new'] {
+  background: var(--stage-new);
+}
+
+[data-stage='learning'] {
+  background: var(--stage-learning);
+}
+
+[data-stage='consolidating'] {
+  background: var(--stage-consolidating);
+}
+
+[data-stage='learned'] {
+  background: var(--stage-learned);
+}
+
+.word-more {
+  flex-shrink: 0;
+  color: #8a929e;
+  font-size: 1.1rem;
+}

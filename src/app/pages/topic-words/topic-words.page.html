@@ -1,0 +1,62 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button fill="clear" class="toolbar-button" (click)="exit()" aria-label="Volver">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>{{ topic || 'Palabras' }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+
+  <div class="words-loading" *ngIf="loading" aria-live="polite">
+    <ion-spinner name="crescent"></ion-spinner>
+    <span>Cargando las palabras...</span>
+  </div>
+
+  <p class="words-error" *ngIf="!loading && loadingError" role="alert">No se pudieron cargar las palabras.</p>
+
+  <div class="words-empty" *ngIf="!loading && !loadingError && (notFound || !words.length)">
+    <p>{{ notFound ? 'Este tema ya no está guardado.' : 'Este tema no tiene palabras.' }}</p>
+    <ion-button fill="outline" (click)="exit()">Volver</ion-button>
+  </div>
+
+  <ng-container *ngIf="!loading && !loadingError && words.length">
+    <p class="words-summary">
+      {{ words.length }} {{ words.length === 1 ? 'palabra' : 'palabras' }} · {{ learnedCount }}
+      {{ learnedCount === 1 ? 'aprendida' : 'aprendidas' }}
+    </p>
+    <p class="words-hint">Toca una palabra para corregir su traducción, marcarla como sabida o eliminarla.</p>
+
+    <ion-searchbar *ngIf="words.length >= searchFrom" class="words-search" placeholder="Buscar en inglés o español"
+      [value]="query" [debounce]="150" (ionInput)="onSearch($event)"></ion-searchbar>
+
+    <ul class="word-list" *ngIf="visibleWords.length; else noMatches">
+      <li *ngFor="let card of visibleWords; trackBy: trackByWord">
+        <button type="button" class="word-row" (click)="openWordMenu(card)"
+          [attr.aria-label]="card.word + ', ' + card.translation + ', ' + stageLabel(card) + '. Opciones'">
+          <!-- crossorigin: así el service worker la guarda para verla sin conexión (ver ngsw-config.json). -->
+          <img *ngIf="card.imageUrl; else noImage" [src]="card.imageUrl" alt="" crossorigin="anonymous" loading="lazy" />
+          <ng-template #noImage>
+            <span class="no-image"><ion-icon name="image-outline" aria-hidden="true"></ion-icon></span>
+          </ng-template>
+          <span class="word-text">
+            <strong>{{ card.word }}</strong>
+            <span>{{ card.translation }}</span>
+          </span>
+          <span class="word-stage">
+            <span class="swatch" [attr.data-stage]="stageOf(card)" aria-hidden="true"></span>
+            {{ stageLabel(card) }}
+          </span>
+          <ion-icon class="word-more" name="ellipsis-horizontal" aria-hidden="true"></ion-icon>
+        </button>
+      </li>
+    </ul>
+    <ng-template #noMatches>
+      <p class="words-hint" aria-live="polite">Ninguna palabra coincide con «{{ query }}».</p>
+    </ng-template>
+  </ng-container>
+
+</ion-content>

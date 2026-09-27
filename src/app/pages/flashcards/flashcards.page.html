@@ -35,7 +35,7 @@
     No se pudieron cargar las tarjetas.
   </p>
 
-  <app-session-summary *ngIf="summary" [summary]="summary" (reviewHard)="reviewHardCards()"
+  <app-session-summary *ngIf="summary" [summary]="summary" [topic]="topic" (reviewHard)="reviewHardCards()"
     (undo)="undo()" (exit)="exitStudy()"></app-session-summary>
 
   <app-intro-card class="quiz-scene" *ngIf="!loading && !loadingError && !summary && exercise === 'intro'"

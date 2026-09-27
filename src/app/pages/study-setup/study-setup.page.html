@@ -16,6 +16,7 @@
   <p class="section-hint"><strong>{{ levelLabel }}</strong> · Las palabras nuevas se eligen para este nivel.</p>
 
   <ion-action-sheet [isOpen]="topicMenuOpen" [header]="menuTopic?.label ?? 'Tema guardado'" [buttons]="[
+      { text: 'Ver palabras', handler: showSelectedTopicWords.bind(this) },
       { text: 'Reiniciar progreso', handler: resetSelectedTopic.bind(this) },
       { text: 'Eliminar', role: 'destructive', handler: deleteSelectedTopic.bind(this) },
       { text: 'Cancelar', role: 'cancel', handler: closeTopicMenu.bind(this) }
@@ -40,7 +41,7 @@
     <button type="button" *ngFor="let topic of topics" class="topic-card" [class.selected]="selectedTopic === topic.id"
       [class.saved]="topic.fromLocal" [attr.aria-pressed]="selectedTopic === topic.id"
       [attr.aria-label]="topicAriaLabel(topic)"
-      [attr.aria-description]="topic.fromLocal ? 'Tecla Menú o Mayús+F10 para reiniciar o eliminar' : null"
+      [attr.aria-description]="topic.fromLocal ? 'Tecla Menú o Mayús+F10 para ver sus palabras, reiniciar o eliminar' : null"
       (pointerdown)="startTopicPress(topic, $event)" (pointermove)="moveTopicPress($event)"
       (pointerup)="cancelTopicPress()" (pointercancel)="cancelTopicPress()"
       (pointerleave)="cancelTopicPress()" (click)="selectTopic(topic.id)"
@@ -87,6 +88,13 @@
         <ion-spinner *ngIf="loadingCards === 'practice'" name="crescent"></ion-spinner>
         {{ loadingCards === 'practice' ? (selectedSavedTopic ? 'Preparando...' : 'Generando tarjetas...') : 'Practicar' }}
         <ion-icon *ngIf="selectedTopic && loadingCards !== 'practice'" slot="end" name="arrow-forward-outline"></ion-icon>
+      </ion-button>
+
+      <!-- Solo en temas guardados: sus palabras, para corregirlas o quitar las que sobran. -->
+      <ion-button *ngIf="selectedSavedTopic as topic" size="large" fill="outline" class="words-btn"
+        [disabled]="!!loadingCards" (click)="showWords(topic)" aria-label="Ver las palabras del tema"
+        title="Ver las palabras del tema">
+        <ion-icon slot="icon-only" name="list-outline" aria-hidden="true"></ion-icon>
       </ion-button>
 
       <!-- Solo en temas guardados: practicarlos no consulta a la IA; las palabras nuevas se piden a propósito. -->

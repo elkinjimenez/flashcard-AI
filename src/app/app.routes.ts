@@ -49,4 +49,9 @@ export const routes: Routes = [
     path: 'flashcards',
     loadComponent: () => import('./pages/flashcards/flashcards.page').then( m => m.FlashcardsPage)
   },
+  // Las palabras de un tema guardado, por su clave (toTopicKey).
+  {
+    path: 'topic-words/:topic',
+    loadComponent: () => import('./pages/topic-words/topic-words.page').then(m => m.TopicWordsPage)
+  },
 ];

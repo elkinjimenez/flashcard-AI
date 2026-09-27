@@ -124,15 +124,24 @@ ion-content {
   font-weight: 800;
 }
 
+// Texto a la izquierda y botón de escuchar a la derecha, para ocupar todo el ancho.
 .word-card {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 16px;
   padding: 20px;
   border: 1px solid rgba(35, 42, 52, 0.06);
   border-radius: 18px;
   background: #ffffff;
   box-shadow: 0 8px 20px rgba(35, 42, 52, 0.04);
+}
+
+.word-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
 
   strong {
     color: #20242b;
@@ -147,17 +156,11 @@ ion-content {
   }
 }
 
-.word-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 // Como el de pronunciación de los ejercicios.
 .speak-button {
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   margin: 0;
   --background: rgba(var(--ion-color-primary-rgb), 0.1);
   --border-radius: 50%;

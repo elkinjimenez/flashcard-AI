@@ -18,6 +18,14 @@ export interface WordSuggestion extends WordDetails {
   imageQuery: string;
 }
 
+// Historia corta con las palabras de una sesión. Los párrafos van separados por saltos de línea.
+export interface MiniStory {
+  title: string;
+  story: string;
+  // Al español, para consultarla: se lee primero en inglés.
+  translation: string;
+}
+
 const exampleProperty = {
   type: 'STRING',
   description: 'Frase corta en inglés (máximo 12 palabras) que contenga la palabra exacta'
@@ -72,6 +80,16 @@ const detailsResponseSchema = {
     },
     required: ['word', 'example', 'confusables']
   }
+};
+
+const storyResponseSchema = {
+  type: 'OBJECT',
+  properties: {
+    title: { type: 'STRING', description: 'Título corto en inglés' },
+    story: { type: 'STRING', description: 'La historia en inglés, con los párrafos separados por un salto de línea' },
+    translation: { type: 'STRING', description: 'Traducción al español de la historia, con los mismos párrafos' }
+  },
+  required: ['title', 'story', 'translation']
 };
 
 @Injectable({ providedIn: 'root' })
@@ -156,6 +174,22 @@ export class GeminiService {
     return details;
   }
 
+  // Para leer al terminar una sesión: las palabras recién practicadas en contexto. null si no devolvió la historia.
+  async writeStory(topic: string, words: string[], level: EnglishLevel): Promise<MiniStory | null> {
+    const text = await this.generateText(
+      `Escribe una historia muy corta en inglés (entre 80 y 150 palabras, en 2 o 3 párrafos) para un estudiante de ${this.describeLevel(level)} que acaba de practicar vocabulario del tema "${topic}".`
+      + ` Usa todas estas palabras, cada una al menos una vez y de forma natural: ${words.join(', ')}.`
+      + ' Que tenga un protagonista, algo que le ocurra y un final, con frases sencillas y gramática adecuada a ese nivel. Sin listas ni Markdown.',
+      { responseMimeType: 'application/json', responseSchema: storyResponseSchema }
+    );
+
+    const parsed = this.parseJson(text) as Partial<Record<keyof MiniStory, unknown>> | undefined;
+    // Sin el formato de Markdown que a veces añade (negritas en las palabras pedidas).
+    const clean = (value: unknown) => typeof value === 'string' ? value.replace(/\*+/g, '').trim() : '';
+    const story = clean(parsed?.story);
+    return story ? { title: clean(parsed?.title), story, translation: clean(parsed?.translation) } : null;
+  }
+
   private async generateText(prompt: string, generationConfig?: object): Promise<string> {
     const params = new HttpParams().set('key', atob(environment.geminiApiKey));
     const contents = [{ parts: [{ text: prompt }] }];
@@ -219,13 +253,18 @@ export class GeminiService {
 
   // [] si la respuesta no es un array JSON válido.
   private parseJsonArray(text: string): any[] {
+    const parsed = this.parseJson(text);
+    return Array.isArray(parsed) ? parsed : [];
+  }
+
+  // undefined si la respuesta no es JSON válido.
+  private parseJson(text: string): unknown {
     const json = text.replace(/^```(?:json)?\s*|\s*```$/gi, '').trim();
 
     try {
-      const parsed = JSON.parse(json);
-      return Array.isArray(parsed) ? parsed : [];
+      return JSON.parse(json);
     } catch {
-      return [];
+      return undefined;
     }
   }
 }

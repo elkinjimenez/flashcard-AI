@@ -3,7 +3,7 @@ import { Subject } from 'rxjs';
 import { Flashcard, learnedBox, reviewIntervalDays } from './flashcard.model';
 import { GeminiService } from './gemini';
 import { CardImageService } from './card-images';
-import { StudySetRepository } from './study-set-repository';
+import { StoredStudySet, StudySetRepository } from './study-set-repository';
 import { toTopicKey } from './topic-key';
 import { EnglishLevel } from './english-level';
 import { toDayKey } from './day-key';
@@ -27,10 +27,18 @@ export interface TopicProgress {
 export interface AnswerRecord {
   // La tarjeta tal como estaba antes de responder.
   previous: Flashcard;
+  // Y como quedó: el resumen de la sesión las compara para ver si subió de nivel y cuándo vuelve.
+  current: Flashcard;
   knew: boolean;
   // Día en que se contó en la actividad: si se deshace pasada la medianoche, se descuenta de ese. undefined si no se
   // contó ("Ya la conozco", ver markKnown).
   day?: string;
+}
+
+// Una palabra borrada de la lista del tema, con lo necesario para devolverla a su sitio (ver restoreWord).
+export interface DeletedWord {
+  card: Flashcard;
+  index: number;
 }
 
 // "Ya la conozco" al presentarla: la primera caja en la que hay que producirla (escribirla o decirla sin pistas). Si de
@@ -43,9 +51,10 @@ export class FlashcardService {
   private images = inject(CardImageService);
   private studySets = inject(StudySetRepository);
 
-  // Emite al salir de una sesión de práctica, con sus respuestas ya guardadas: las pestañas refrescan su progreso.
-  // Ionic no les manda ionViewWillEnter al volver de la práctica, solo a la página de pestañas que las contiene.
-  readonly sessionEnded = new Subject<void>();
+  // Emite al salir de una sesión de práctica (con sus respuestas ya guardadas) y al cambiar una palabra desde la lista
+  // del tema: las pestañas refrescan su progreso. Ionic no les manda ionViewWillEnter al volver de esas páginas, solo a
+  // la página de pestañas que las contiene.
+  readonly cardsChanged = new Subject<void>();
 
   async getTopics(): Promise<TopicResult> {
     const storedTopics = await this.readTopics();
@@ -157,22 +166,62 @@ export class FlashcardService {
     return (await this.studySets.get(topic))?.cards ?? [];
   }
 
+  // El tema guardado, buscado por su nombre o por su clave (toTopicKey); undefined si no existe.
+  getStudySet(topic: string): Promise<StoredStudySet | undefined> {
+    return this.studySets.get(topic);
+  }
+
+  // Corrige la traducción. El truco para recordarla se basaba en la anterior: se descarta y la IA creará otro cuando
+  // haga falta. No toca el progreso.
+  async editTranslation(topic: string, word: string, translation: string): Promise<void> {
+    await this.studySets.updateCards(topic, cards => cards.map(card =>
+      card.word === word ? { ...card, translation, mnemonic: undefined } : card
+    ));
+  }
+
+  // "Ya me la sé", desde la lista del tema: pasa a aprendida, con su primer repaso de mantenimiento. No cuenta en la
+  // actividad. Se deshace con undoAnswer; undefined si la tarjeta ya no existe.
+  async markLearned(topic: string, word: string): Promise<AnswerRecord | undefined> {
+    const change = await this.updateCard(topic, word, card =>
+      ({ ...card, learned: true, box: learnedBox, nextReview: this.reviewDate(learnedBox) }));
+    return change && { ...change, knew: true };
+  }
+
+  // Quita la palabra del tema, con su progreso. undefined si ya no existía.
+  async deleteWord(topic: string, word: string): Promise<DeletedWord | undefined> {
+    let deleted: DeletedWord | undefined;
+    await this.studySets.updateCards(topic, cards => {
+      const index = cards.findIndex(card => card.word === word);
+      if (index < 0) return cards;
+      deleted = { card: cards[index], index };
+      return cards.filter((_, i) => i !== index);
+    });
+    return deleted;
+  }
+
+  // Deshace deleteWord: la tarjeta vuelve a su sitio tal como estaba. Si entretanto se volvió a añadir, no se duplica.
+  async restoreWord(topic: string, { card, index }: DeletedWord): Promise<void> {
+    await this.studySets.updateCards(topic, cards => cards.some(item => item.word === card.word)
+      ? cards
+      : [...cards.slice(0, index), card, ...cards.slice(index)]);
+  }
+
   // Guarda la respuesta en la tarjeta y la cuenta en la actividad del día. undefined si la tarjeta ya no existe.
   async recordAnswer(topic: string, word: string, knew: boolean): Promise<AnswerRecord | undefined> {
-    const previous = await this.updateCard(topic, word, card => this.applyAnswer(card, knew));
-    if (!previous) return undefined;
+    const change = await this.updateCard(topic, word, card => this.applyAnswer(card, knew));
+    if (!change) return undefined;
 
     const day = toDayKey(new Date());
     await this.countActivity(day, knew, 1);
-    return { previous, knew, day };
+    return { ...change, knew, day };
   }
 
   // Una palabra nueva que ya conocía salta a la caja knownBox, con el repaso que le toca en ella. No es una respuesta:
   // no cuenta en la actividad. Se deshace con undoAnswer; undefined si la tarjeta ya no existe.
   async markKnown(topic: string, word: string): Promise<AnswerRecord | undefined> {
-    const previous = await this.updateCard(topic, word, card =>
+    const change = await this.updateCard(topic, word, card =>
       ({ ...card, box: knownBox, nextReview: this.reviewDate(knownBox) }));
-    return previous && { previous, knew: true };
+    return change && { ...change, knew: true };
   }
 
   // Solo el progreso: lo demás (p. ej. una imagen cambiada después de responder) se queda como está.
@@ -187,15 +236,19 @@ export class FlashcardService {
     }
   }
 
-  // La tarjeta tal como estaba antes de cambiarla; undefined si ya no existe.
-  private async updateCard(topic: string, word: string, update: (card: Flashcard) => Flashcard): Promise<Flashcard | undefined> {
-    let previous: Flashcard | undefined;
+  // La tarjeta antes y después de cambiarla; undefined si ya no existe.
+  private async updateCard(
+    topic: string,
+    word: string,
+    update: (card: Flashcard) => Flashcard
+  ): Promise<{ previous: Flashcard; current: Flashcard } | undefined> {
+    let change: { previous: Flashcard; current: Flashcard } | undefined;
     await this.studySets.updateCards(topic, cards => cards.map(card => {
       if (card.word !== word) return card;
-      previous = card;
-      return update(card);
+      change = { previous: card, current: update(card) };
+      return change.current;
     }));
-    return previous;
+    return change;
   }
 
   // Truco para recordar una palabra que cuesta: el guardado o, la primera vez, uno nuevo de la IA, que se guarda (también

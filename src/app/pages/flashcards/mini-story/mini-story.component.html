@@ -1,0 +1,50 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Mini-historia</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="close()">Cerrar</ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="story-loading" *ngIf="loading" aria-live="polite">
+    <ion-spinner name="crescent"></ion-spinner>
+    <span>Escribiendo una historia con tus palabras...</span>
+  </div>
+
+  <div class="story-error" *ngIf="!loading && error" role="alert">
+    <p>{{ error }}</p>
+    <ion-button fill="outline" (click)="load()">Reintentar</ion-button>
+  </div>
+
+  <ng-container *ngIf="!loading && story">
+    <article class="story" lang="en">
+      <h2 *ngIf="story.title">{{ story.title }}</h2>
+      <p *ngFor="let paragraph of paragraphs">
+        <ng-container *ngFor="let part of paragraph; let odd = odd">
+          <button type="button" class="story-word" *ngIf="odd" (click)="speakWord(part)">{{ part }}</button>
+          <ng-container *ngIf="!odd">{{ part }}</ng-container>
+        </ng-container>
+      </p>
+    </article>
+
+    <p class="story-hint" *ngIf="canListen">Toca una palabra resaltada para oírla.</p>
+
+    <div class="story-actions">
+      <ion-button *ngIf="canListen" class="listen-btn" (click)="toggleReading()">
+        <ion-icon slot="start" [name]="speaking ? 'stop-circle-outline' : 'volume-high-outline'" aria-hidden="true"></ion-icon>
+        {{ speaking ? 'Detener' : 'Escuchar' }}
+      </ion-button>
+      <ion-button *ngIf="translationParagraphs.length" fill="outline" class="translation-btn"
+        [attr.aria-expanded]="showTranslation" (click)="showTranslation = !showTranslation">
+        <ion-icon slot="start" [name]="showTranslation ? 'eye-off-outline' : 'eye-outline'" aria-hidden="true"></ion-icon>
+        {{ showTranslation ? 'Ocultar traducción' : 'Ver traducción' }}
+      </ion-button>
+    </div>
+
+    <section class="story-translation" *ngIf="showTranslation" lang="es" aria-label="Traducción">
+      <p *ngFor="let paragraph of translationParagraphs">{{ paragraph }}</p>
+    </section>
+  </ng-container>
+</ion-content>

@@ -1,22 +1,27 @@
+@use 'sass:list';
+@use 'sass:math';
+
 .session-summary {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  margin-top: 12vh;
+  margin-top: 3vh;
+  padding-bottom: 16px;
   text-align: center;
 
   .title {
     color: var(--ion-color-primary);
     font-size: 1.8rem;
     font-weight: 800;
+    animation: rise 0.4s ease-out 0.15s both;
   }
 
   .stats {
     display: flex;
-    gap: 12px;
+    gap: 10px;
     width: 100%;
-    margin: 20px 0 8px;
+    margin: 16px 0 8px;
   }
 
   .stat {
@@ -25,7 +30,8 @@
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    padding: 18px 8px;
+    min-width: 0;
+    padding: 16px 6px;
     border: 1px solid rgba(35, 42, 52, 0.06);
     border-radius: 16px;
     background: #ffffff;
@@ -33,8 +39,20 @@
     color: #69717d;
     font-size: 0.78rem;
     font-weight: 700;
+    animation: rise 0.4s ease-out 0.25s both;
+
+    & + & {
+      animation-delay: 0.32s;
+    }
+
+    & + & + & {
+      animation-delay: 0.39s;
+    }
 
     strong {
+      display: flex;
+      align-items: center;
+      gap: 2px;
       color: #20242b;
       font-size: 2rem;
       font-weight: 800;
@@ -48,6 +66,27 @@
     &.hard strong {
       color: var(--ion-color-danger);
     }
+
+    &.streak strong {
+      color: #e8590c;
+
+      ion-icon {
+        font-size: 1.5rem;
+      }
+    }
+  }
+
+  .streak-note {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f1f3f6;
+    color: #69717d;
+    font-size: 0.7rem;
+
+    &.highlight {
+      background: #fff0e6;
+      color: #c2410c;
+    }
   }
 
   .message {
@@ -59,12 +98,30 @@
 
   .review-btn {
     width: 100%;
-    margin-top: 20px;
+    margin-top: 12px;
     --background: var(--ion-color-primary);
     --border-radius: 16px;
     --box-shadow: 0 12px 26px rgba(var(--ion-color-primary-rgb), 0.28);
     --color: #ffffff;
     font-weight: 800;
+  }
+
+  // Secundario si hay difíciles que repasar; si no, es lo siguiente que se ofrece.
+  .story-btn {
+    width: 100%;
+    --background: rgba(var(--ion-color-primary-rgb), 0.1);
+    --background-activated: rgba(var(--ion-color-primary-rgb), 0.18);
+    --border-radius: 16px;
+    --box-shadow: none;
+    --color: var(--ion-color-primary);
+    font-weight: 800;
+
+    &.main {
+      margin-top: 12px;
+      --background: var(--ion-color-primary);
+      --box-shadow: 0 12px 26px rgba(var(--ion-color-primary-rgb), 0.28);
+      --color: #ffffff;
+    }
   }
 
   .exit-btn {
@@ -76,4 +133,293 @@
     --color: var(--ion-color-medium);
     font-weight: 600;
   }
+}
+
+.words {
+  width: 100%;
+  margin-top: 12px;
+  padding: 16px 14px;
+  border: 1px solid rgba(35, 42, 52, 0.06);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(35, 42, 52, 0.04);
+  text-align: left;
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+}
+
+.words-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 12px;
+
+  h2 {
+    margin: 0;
+    color: #20242b;
+    font-size: 1rem;
+    font-weight: 800;
+  }
+}
+
+.level-ups {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--ion-color-success-shade);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.word-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+
+  & + & {
+    border-top: 1px solid #eef1f6;
+  }
+
+  img,
+  .no-image {
+    flex-shrink: 0;
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    background: #e7ebf2;
+    object-fit: cover;
+  }
+}
+
+.no-image {
+  display: grid;
+  place-items: center;
+  color: #8a929e;
+  font-size: 1.4rem;
+}
+
+.word-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  color: #69717d;
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+
+  strong {
+    color: #20242b;
+    font-size: 1rem;
+  }
+}
+
+.returns {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+  color: #8a929e;
+  font-size: 0.75rem;
+}
+
+.level {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+// Un punto por caja hasta la de aprendida; los ganados en la sesión se encienden.
+.level-dots {
+  display: flex;
+  gap: 3px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e1e6ee;
+
+  &.filled {
+    background: var(--ion-color-primary);
+  }
+
+  &.gained {
+    background: var(--ion-color-success);
+    animation: dot-gained 0.5s ease-out both;
+  }
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #69717d;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+[data-outcome='up'] .status {
+  color: var(--ion-color-success-shade);
+}
+
+[data-outcome='learned'] {
+  .status {
+    color: #b45309;
+  }
+
+  .dot.filled {
+    background: #f59f00;
+  }
+}
+
+[data-outcome='hard'] {
+  .status {
+    color: var(--ion-color-danger);
+  }
+
+  .dot.filled {
+    background: #9aa3af;
+  }
+}
+
+// Celebración al terminar, sutil: la insignia aparece con un pequeño rebote y suelta unas chispas que se desvanecen.
+$spark-count: 12;
+$spark-colors: var(--ion-color-success), var(--ion-color-primary), #f59f00, #e8590c;
+
+.celebration {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+}
+
+.badge {
+  // Por encima de las chispas, que salen de detrás.
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--ion-color-success);
+  box-shadow: 0 10px 24px rgba(var(--ion-color-success-rgb), 0.3);
+  color: #ffffff;
+  font-size: 1.9rem;
+  animation: badge-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+.spark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  opacity: 0;
+  animation: spark 0.8s cubic-bezier(0.15, 0.7, 0.3, 1) 0.2s both;
+}
+
+// En círculo, alternando distancia y tamaño para que no parezca un anillo perfecto.
+@for $i from 1 through $spark-count {
+  $angle: ($i - 1) * math.div(360deg, $spark-count) + ($i % 2) * 12deg;
+  $distance: 40px + ($i % 2) * 14px;
+
+  .spark:nth-child(#{$i}) {
+    --x: #{math.cos($angle) * $distance};
+    --y: #{math.sin($angle) * $distance};
+    background: list.nth($spark-colors, ($i - 1) % list.length($spark-colors) + 1);
+
+    @if $i % 3 == 0 {
+      width: 4px;
+      height: 4px;
+      margin: -2px 0 0 -2px;
+    }
+  }
+}
+
+@keyframes badge-pop {
+  from {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes spark {
+  0% {
+    transform: translate(0, 0) scale(0.3);
+    opacity: 0;
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--x), var(--y)) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes dot-gained {
+  from {
+    transform: scale(0.3);
+    opacity: 0.4;
+  }
+  60% {
+    transform: scale(1.4);
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+// Sin movimiento: todo aparece ya en su sitio y no hay chispas.
+@media (prefers-reduced-motion: reduce) {
+  .session-summary .title,
+  .session-summary .stat,
+  .badge,
+  .dot.gained {
+    animation: none;
+  }
+
+  .spark {
+    display: none;
+  }
+}
+
+// Solo para el lector de pantalla.
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

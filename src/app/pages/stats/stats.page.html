@@ -84,16 +84,24 @@
 
       <section class="panel">
         <h2 class="panel-title">Por tema</h2>
+        <p class="panel-note">Toca un tema para ver sus palabras.</p>
         <ul class="topic-list">
           <li *ngFor="let topic of s.topics">
-            <div class="topic-row">
-              <span class="topic-name">{{ topic.topic }}</span>
-              <span class="topic-count">{{ topic.known }}/{{ topic.total }}</span>
-            </div>
-            <div class="meter" role="progressbar" aria-valuemin="0" [attr.aria-valuemax]="topic.total"
-              [attr.aria-valuenow]="topic.known" [attr.aria-label]="'Sabes ' + topic.known + ' de ' + topic.total + ' palabras de ' + topic.topic">
-              <span class="meter-fill" [style.width.%]="topicPercent(topic)"></span>
-            </div>
+            <a class="topic-link" [routerLink]="['/topic-words', topicKey(topic)]" [state]="{ returnUrl: '/tabs/progress' }"
+              [attr.aria-label]="'Ver las palabras de ' + topic.topic + '. Sabes ' + topic.known + ' de ' + topic.total">
+
+              <div class="topic-row">
+                <span class="topic-name">{{ topic.topic }}</span>
+                <span class="topic-count">
+                  {{ topic.known }}/{{ topic.total }}
+                  <ion-icon name="chevron-forward" aria-hidden="true"></ion-icon>
+                </span>
+              </div>
+              <div class="meter" role="progressbar" aria-valuemin="0" [attr.aria-valuemax]="topic.total"
+                [attr.aria-valuenow]="topic.known" [attr.aria-label]="'Sabes ' + topic.known + ' de ' + topic.total + ' palabras de ' + topic.topic">
+                <span class="meter-fill" [style.width.%]="topicPercent(topic)"></span>
+              </div>
+            </a>
           </li>
         </ul>
       </section>

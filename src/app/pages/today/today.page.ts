@@ -44,7 +44,7 @@ export class TodayPage {
   constructor() {
     addIcons({ arrowForwardOutline, flame, volumeHighOutline });
     registerTopicIcons();
-    this.flashcardService.sessionEnded.pipe(takeUntilDestroyed()).subscribe(() => this.load());
+    this.flashcardService.cardsChanged.pipe(takeUntilDestroyed()).subscribe(() => this.load());
   }
 
   // En cada visita y al terminar una sesión de práctica.
