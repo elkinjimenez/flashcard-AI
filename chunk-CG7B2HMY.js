@@ -1,0 +1,1 @@
+import{a as t,b as e}from"./chunk-KVTJP45G.js";var i=[{id:10,label:"Suave"},{id:20,label:"Normal"},{id:30,label:"Exigente"},{id:50,label:"Intensa"}],o="daily-goal",n=20;function u(a){return i.find(l=>l.id===a)?.label??""}function r(a){return i.find(l=>l.id===Number(a))?.id}function f(){return r(t(o))??n}function s(a){e(o,String(a))}export{i as a,u as b,r as c,f as d,s as e};

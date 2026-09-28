@@ -1,61 +1,50 @@
 {
+  "id": "/",
   "name": "Flashcards AI",
   "short_name": "Flashcards",
   "description": "Aprende palabras con flashcards generadas por IA.",
   "lang": "es",
-  "theme_color": "#2447d8",
+  "dir": "ltr",
+  "categories": ["education"],
+  "theme_color": "#f5f7fb",
   "background_color": "#f5f7fb",
   "display": "standalone",
   "scope": "./",
   "start_url": "./",
   "icons": [
+    { "src": "icons/icon-48x48.png", "sizes": "48x48", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-72x72.png", "sizes": "72x72", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-96x96.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-128x128.png", "sizes": "128x128", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-144x144.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-152x152.png", "sizes": "152x152", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-384x384.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/maskable-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
     {
-      "src": "icons/icon-72x72.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "maskable any"
+      "name": "Repasar hoy",
+      "short_name": "Repasar",
+      "description": "Los repasos que te tocan hoy",
+      "url": "tabs/today",
+      "icons": [{ "src": "icons/shortcut-today.png", "sizes": "96x96", "type": "image/png" }]
     },
     {
-      "src": "icons/icon-96x96.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "maskable any"
+      "name": "Mis temas",
+      "short_name": "Temas",
+      "description": "Crea un tema o practica uno",
+      "url": "tabs/topics",
+      "icons": [{ "src": "icons/shortcut-topics.png", "sizes": "96x96", "type": "image/png" }]
     },
     {
-      "src": "icons/icon-128x128.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-144x144.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-152x152.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "icons/icon-512x512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable any"
+      "name": "Mi progreso",
+      "short_name": "Progreso",
+      "description": "Tu racha y lo que ya sabes",
+      "url": "tabs/progress",
+      "icons": [{ "src": "icons/shortcut-progress.png", "sizes": "96x96", "type": "image/png" }]
     }
   ]
 }
