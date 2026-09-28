@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Flashcard, isNewCard } from './flashcard.model';
+import { Flashcard, isKnownCard, isNewCard, knownFromBox } from './flashcard.model';
 import { DailyActivity, StudySetRepository } from './study-set-repository';
 import { toDayKey } from './day-key';
 
@@ -8,8 +8,10 @@ export type WordStage = 'new' | 'learning' | 'consolidating' | 'learned';
 
 export interface TopicStats {
   topic: string;
-  // Igual que en la pantalla de temas: acertadas en su último repaso o ya aprendidas.
+  // Igual que en la pantalla de temas: afianzadas o aprendidas (ver isKnownCard).
   known: number;
+  // Empezadas, aún sin saberlas: el tramo claro de la barra.
+  learning: number;
   total: number;
   // Repasos que ya tocan, como dueToday.
   due: number;
@@ -47,11 +49,12 @@ export interface Stats {
 
 const dayMs = 24 * 60 * 60 * 1000;
 
-// Nueva: aún no se respondió. Aprendiendo: cajas 0 a 2. Afianzada: cajas 3 a 5, a un paso de aprenderse.
+// Nueva: aún no se respondió. Aprendiendo: cajas 0 a 2. Afianzada: desde la caja 3 (knownFromBox), ya cuenta como
+// sabida (también una aprendida que se falló y aún no acertó su repaso).
 export function wordStage(card: Flashcard): WordStage {
   if (card.learned) return 'learned';
   if (isNewCard(card)) return 'new';
-  return (card.box ?? 0) >= 3 ? 'consolidating' : 'learning';
+  return (card.box ?? 0) >= knownFromBox ? 'consolidating' : 'learning';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -94,7 +97,8 @@ export class StatsService {
       topics: studySets
         .map(studySet => ({
           topic: studySet.topic,
-          known: studySet.cards.filter(card => card.learned || (card.box ?? 0) >= 1).length,
+          known: studySet.cards.filter(isKnownCard).length,
+          learning: studySet.cards.filter(card => !isKnownCard(card) && !isNewCard(card)).length,
           total: studySet.cards.length,
           due: studySet.cards.filter(card => card.nextReview && card.nextReview <= nowIso).length
         }))

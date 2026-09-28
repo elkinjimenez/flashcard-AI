@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { merge } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
@@ -24,12 +25,13 @@ import {
   refresh
 } from 'ionicons/icons';
 import { registerTopicIcons, topicIcon } from 'src/app/services/topic-icon';
-import { Flashcard, FlashcardService, TopicProgress, TopicResult } from 'src/app/services/flashcard';
+import {
+  Flashcard, FlashcardService, NewWordsLimitError, NewWordsToday, TopicProgress, TopicResult
+} from 'src/app/services/flashcard';
 import { toTopicKey } from 'src/app/services/topic-key';
 import { AppUpdateService } from 'src/app/services/app-update';
-import {
-  EnglishLevel, englishLevels, englishLevelLabel, loadEnglishLevel, saveEnglishLevel
-} from 'src/app/services/english-level';
+import { DayChangeService } from 'src/app/services/day-change';
+import { EnglishLevel, englishLevelLabel, loadEnglishLevel } from 'src/app/services/english-level';
 import { describeRequestError } from 'src/app/services/request-error';
 import { ToastService } from 'src/app/services/toast';
 
@@ -81,14 +83,17 @@ export class StudySetupPage implements OnInit {
 
   selectedTopic: string | null = null;
   cardCount: number = 10;
-  readonly levels = englishLevels;
-  // Se recuerda entre visitas.
+  // Se elige en Ajustes: se vuelve a leer en cada visita.
   level: EnglishLevel = loadEnglishLevel();
+  // Las palabras nuevas de hoy frente al tope de Ajustes; null mientras se lee o si falla.
+  newWords: NewWordsToday | null = null;
 
   constructor() {
     addIcons({ checkmark, bookmarkOutline, sparklesOutline, arrowForwardOutline, listOutline, refresh });
     registerTopicIcons();
-    this.flashcardService.cardsChanged.pipe(takeUntilDestroyed()).subscribe(() => this.ionViewWillEnter());
+    merge(this.flashcardService.cardsChanged, inject(DayChangeService).dayChanged)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.ionViewWillEnter());
   }
 
   async ngOnInit() {
@@ -112,8 +117,10 @@ export class StudySetupPage implements OnInit {
     }
   }
 
-  // Al volver a la pestaña o al terminar una sesión, el progreso (y los temas recién guardados) cambian.
+  // Al volver a la pestaña, al terminar una sesión o al empezar un día nuevo, el progreso (y los temas recién guardados)
+  // cambian. También las palabras nuevas que quedan hoy, y el tope si se cambió en Ajustes.
   async ionViewWillEnter() {
+    this.level = loadEnglishLevel();
     if (!this.loadingTopics && this.topics.length) {
       await this.refreshProgress();
     }
@@ -121,7 +128,11 @@ export class StudySetupPage implements OnInit {
 
   private async refreshProgress() {
     try {
-      const progress = await this.flashcardService.getTopicsProgress();
+      const [progress, newWords] = await Promise.all([
+        this.flashcardService.getTopicsProgress(),
+        this.flashcardService.newWordsToday()
+      ]);
+      this.newWords = newWords;
       this.topics = this.topics.map(topic => {
         const topicProgress = progress.get(topic.id);
         return { ...topic, progress: topicProgress, fromLocal: topic.fromLocal || !!topicProgress };
@@ -135,9 +146,9 @@ export class StudySetupPage implements OnInit {
     return englishLevelLabel(this.level);
   }
 
-  setLevel(level: EnglishLevel) {
-    this.level = level;
-    saveEnglishLevel(level);
+  // Parte del tema que son `count` palabras, para su barra: las que sabe y, en claro, las que está aprendiendo.
+  progressPercent(progress: TopicProgress, count: number): number {
+    return progress.total ? count * 100 / progress.total : 0;
   }
 
   topicAriaLabel(topic: Topic): string {
@@ -320,8 +331,41 @@ export class StudySetupPage implements OnInit {
     return topic?.progress ? topic : undefined;
   }
 
+  // Ya no se pueden empezar palabras nuevas hoy.
+  get newWordsLimitReached(): boolean {
+    return this.newWords?.left === 0;
+  }
+
+  // Las que pide el botón de añadir: las elegidas, como mucho las que quedan del tope.
+  get newWordsCount(): number {
+    return Math.min(this.cardCount, this.newWords?.left ?? this.cardCount);
+  }
+
+  // Ya se sabe todas, o solo le quedan nuevas y ya se llegó al tope.
   get nothingToPractice(): boolean {
-    return this.selectedSavedTopic?.progress?.pending === 0;
+    const progress = this.selectedSavedTopic?.progress;
+    return !!progress && (progress.pending === 0 || (this.newWordsLimitReached && progress.pending === progress.newWords));
+  }
+
+  // Un tema nuevo se crea con palabras nuevas: con el tope alcanzado no se puede.
+  get cannotStart(): boolean {
+    return !this.selectedTopic || this.nothingToPractice || (!this.selectedSavedTopic && this.newWordsLimitReached);
+  }
+
+  get sessionHint(): string | null {
+    if (!this.selectedTopic) return null;
+    const newWords = this.newWords;
+    if (this.selectedSavedTopic?.progress?.pending === 0 && !this.newWordsLimitReached) {
+      return 'Ya sabes todas las palabras de este tema y volverán cuando toque repasarlas. Añade nuevas para seguir.';
+    }
+    if (newWords && !newWords.left) {
+      return `Hoy ya empezaste tus ${newWords.limit} palabras nuevas: ahora toca repasar. Mañana podrás empezar más `
+        + '(el tope se cambia en Ajustes).';
+    }
+    if (newWords && newWords.left < this.cardCount) {
+      return `Hoy puedes empezar ${newWords.left} palabras nuevas más: tu tope diario es de ${newWords.limit}.`;
+    }
+    return null;
   }
 
   // Con un tema guardado no consulta a la IA; con uno nuevo lo crea.
@@ -330,7 +374,7 @@ export class StudySetupPage implements OnInit {
   }
 
   addNewWords() {
-    return this.openSession('new-words', topic => this.flashcardService.addWords(topic, this.cardCount, this.level));
+    return this.openSession('new-words', topic => this.flashcardService.addWords(topic, this.newWordsCount, this.level));
   }
 
   private async openSession(mode: 'practice' | 'new-words', load: (topic: string) => Promise<Flashcard[]>) {
@@ -342,12 +386,17 @@ export class StudySetupPage implements OnInit {
     try {
       const cards = await load(topic.label);
       if (!cards.length) {
-        // Ya se sabe todas: con el progreso al día se avisa y queda solo añadir palabras.
+        // Ya se sabe todas o llegó al tope de nuevas: con el progreso al día, sessionHint lo explica.
         await this.refreshProgress();
         return;
       }
       await this.router.navigate(['/flashcards'], { state: { topic: topic.label, cards, returnUrl: '/tabs/topics' } });
     } catch (error) {
+      if (error instanceof NewWordsLimitError) {
+        this.toast.show(error.message, { duration: 5000 });
+        await this.refreshProgress();
+        return;
+      }
       console.error('No se pudieron generar las tarjetas', error);
       this.showRequestError('No se pudieron generar las tarjetas.', error);
     } finally {

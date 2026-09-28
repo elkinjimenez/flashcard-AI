@@ -6,6 +6,7 @@ import { addIcons } from 'ionicons';
 import { checkmark, imageOutline, volumeHighOutline } from 'ionicons/icons';
 import { Flashcard } from 'src/app/services/flashcard';
 import { isSameWord, isTypo, normalizeAnswer } from 'src/app/services/word-forms';
+import { CardImageDirective } from 'src/app/card-image.directive';
 
 type WriteState = 'idle' | 'correct' | 'wrong';
 // exact: la palabra tal cual. close: otra forma (jumps por jump) o una errata, que también valen.
@@ -24,7 +25,7 @@ const defaultMessage = 'Escribe la palabra que muestra la imagen.';
 @Component({
   selector: 'app-write-card',
   standalone: true,
-  imports: [CommonModule, FormsModule, IonButton, IonIcon],
+  imports: [CommonModule, FormsModule, IonButton, IonIcon, CardImageDirective],
   templateUrl: './write-card.component.html',
   styleUrls: ['./write-card.component.scss'],
 })

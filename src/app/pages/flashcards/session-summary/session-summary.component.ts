@@ -1,7 +1,6 @@
 import { Component, EventEmitter, Input, OnChanges, OnInit, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonButton, IonIcon, ModalController } from '@ionic/angular/standalone';
-import { Haptics, NotificationType } from '@capacitor/haptics';
 import { addIcons } from 'ionicons';
 import {
   arrowUndoOutline, arrowUp, bookOutline, checkmark, flame, imageOutline, star, timeOutline
@@ -10,6 +9,8 @@ import { Flashcard, learnedBox } from 'src/app/services/flashcard.model';
 import { Streak, WordStage, wordStage } from 'src/app/services/stats';
 import { MiniStory } from 'src/app/services/gemini';
 import { MiniStoryComponent } from '../mini-story/mini-story.component';
+import { CardImageDirective } from 'src/app/card-image.directive';
+import { AnswerFeedbackService } from 'src/app/services/answer-feedback';
 
 // Cómo le fue a una palabra en la sesión (o en la ronda de difíciles).
 export interface SummaryWord {
@@ -65,12 +66,13 @@ const dayMs = 24 * 60 * 60 * 1000;
 @Component({
   selector: 'app-session-summary',
   standalone: true,
-  imports: [CommonModule, IonButton, IonIcon],
+  imports: [CommonModule, IonButton, IonIcon, CardImageDirective],
   templateUrl: './session-summary.component.html',
   styleUrls: ['./session-summary.component.scss'],
 })
 export class SessionSummaryComponent implements OnInit, OnChanges {
   private modalController = inject(ModalController);
+  private feedback = inject(AnswerFeedbackService);
 
   @Input({ required: true }) summary!: SessionSummary;
   // Para la mini-historia.
@@ -92,9 +94,9 @@ export class SessionSummaryComponent implements OnInit, OnChanges {
     addIcons({ arrowUndoOutline, arrowUp, bookOutline, checkmark, flame, imageOutline, star, timeOutline });
   }
 
-  // Con la celebración, una vibración breve de éxito donde la haya (en el navegador, solo en algunos Android).
+  // Con la celebración, una vibración breve de éxito donde la haya (ver AnswerFeedbackService).
   ngOnInit() {
-    Haptics.notification({ type: NotificationType.Success }).catch(() => undefined);
+    this.feedback.sessionFinished();
   }
 
   ngOnChanges() {

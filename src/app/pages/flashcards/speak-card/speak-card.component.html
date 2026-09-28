@@ -3,7 +3,7 @@
 
   <div class="exercise-image">
     <!-- alt vacío: el texto alternativo delataría la palabra. -->
-    <img *ngIf="!imageFailed" [src]="card.imageUrl" alt="" crossorigin="anonymous" draggable="false"
+    <img appCardImage *ngIf="!imageFailed" [src]="card.imageUrl" alt="" crossorigin="anonymous" draggable="false"
       [class.ready]="imageLoaded"
       (load)="imageLoaded = true" (error)="onImageError()" />
     <div class="image-fallback" *ngIf="imageFailed">

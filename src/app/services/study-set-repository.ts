@@ -26,6 +26,8 @@ export interface DailyActivity {
   date: string;
   answers: number;
   correct: number;
+  // Palabras nuevas empezadas (su primera respuesta), para el tope diario. Los días de antes de existir no lo tienen.
+  newWords?: number;
 }
 
 // Toda la base de datos local: los temas con sus tarjetas y la actividad diaria.
@@ -37,35 +39,28 @@ export class StudySetRepository {
   private readonly storeName = 'study-sets';
   private readonly activityStoreName = 'activity';
   private switchingVersion = false;
+  // Una sola conexión para todas las operaciones (abrir la base en cada una es lento). undefined hasta la primera
+  // operación, o cuando se perdió y la siguiente debe abrir otra.
+  private connection?: Promise<IDBDatabase>;
 
-  async get(topic: string): Promise<StoredStudySet | undefined> {
-    const database = await this.openDatabase();
-    const record = await new Promise<StoredStudySet | undefined>((resolve, reject) => {
-      const transaction = database.transaction(this.storeName, 'readonly');
+  get(topic: string): Promise<StoredStudySet | undefined> {
+    return this.transaction(this.storeName, 'readonly', (transaction, resolve, reject) => {
       const request = transaction.objectStore(this.storeName).get(this.getStudySetId(topic));
       request.onsuccess = () => resolve(request.result as StoredStudySet | undefined);
       request.onerror = () => reject(request.error);
     });
-    database.close();
-    return record;
   }
 
-  async getAll(): Promise<StoredStudySet[]> {
-    const database = await this.openDatabase();
-    const studySets = await new Promise<StoredStudySet[]>((resolve, reject) => {
-      const transaction = database.transaction(this.storeName, 'readonly');
+  getAll(): Promise<StoredStudySet[]> {
+    return this.transaction(this.storeName, 'readonly', (transaction, resolve, reject) => {
       const request = transaction.objectStore(this.storeName).getAll();
       request.onsuccess = () => resolve(request.result as StoredStudySet[]);
       request.onerror = () => reject(request.error);
     });
-    database.close();
-    return studySets;
   }
 
-  async save(topic: string, cards: Flashcard[]): Promise<void> {
-    const database = await this.openDatabase();
-    await new Promise<void>((resolve, reject) => {
-      const transaction = database.transaction(this.storeName, 'readwrite');
+  save(topic: string, cards: Flashcard[]): Promise<void> {
+    return this.transaction(this.storeName, 'readwrite', (transaction, resolve, reject) => {
       transaction.objectStore(this.storeName).put({
         id: this.getStudySetId(topic),
         topic,
@@ -76,14 +71,11 @@ export class StudySetRepository {
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
     });
-    database.close();
   }
 
-  async updateCards(topic: string, update: (cards: Flashcard[]) => Flashcard[]): Promise<void> {
-    const database = await this.openDatabase();
-    await new Promise<void>((resolve, reject) => {
-      // Lectura y escritura en la misma transacción para que dos llamadas seguidas no se pisen.
-      const transaction = database.transaction(this.storeName, 'readwrite');
+  updateCards(topic: string, update: (cards: Flashcard[]) => Flashcard[]): Promise<void> {
+    // Lectura y escritura en la misma transacción para que dos llamadas seguidas no se pisen.
+    return this.transaction(this.storeName, 'readwrite', (transaction, resolve, reject) => {
       const store = transaction.objectStore(this.storeName);
       const request = store.get(this.getStudySetId(topic));
 
@@ -106,37 +98,27 @@ export class StudySetRepository {
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);
     });
-    database.close();
   }
 
-  async delete(topic: string): Promise<void> {
-    const database = await this.openDatabase();
-    await new Promise<void>((resolve, reject) => {
-      const transaction = database.transaction(this.storeName, 'readwrite');
+  delete(topic: string): Promise<void> {
+    return this.transaction(this.storeName, 'readwrite', (transaction, resolve, reject) => {
       transaction.objectStore(this.storeName).delete(this.getStudySetId(topic));
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
     });
-    database.close();
   }
 
-  async getActivity(): Promise<DailyActivity[]> {
-    const database = await this.openDatabase();
-    const activity = await new Promise<DailyActivity[]>((resolve, reject) => {
-      const transaction = database.transaction(this.activityStoreName, 'readonly');
+  getActivity(): Promise<DailyActivity[]> {
+    return this.transaction(this.activityStoreName, 'readonly', (transaction, resolve, reject) => {
       const request = transaction.objectStore(this.activityStoreName).getAll();
       request.onsuccess = () => resolve(request.result as DailyActivity[]);
       request.onerror = () => reject(request.error);
     });
-    database.close();
-    return activity;
   }
 
   // Suma respuestas a un día; en negativo, las descuenta (al deshacer).
-  async addActivity(date: string, answers: number, correct: number): Promise<void> {
-    const database = await this.openDatabase();
-    await new Promise<void>((resolve, reject) => {
-      const transaction = database.transaction(this.activityStoreName, 'readwrite');
+  addActivity(date: string, answers: number, correct: number, newWords = 0): Promise<void> {
+    return this.transaction(this.activityStoreName, 'readwrite', (transaction, resolve, reject) => {
       const store = transaction.objectStore(this.activityStoreName);
       const request = store.get(date);
 
@@ -147,7 +129,8 @@ export class StudySetRepository {
           store.put({
             date,
             answers: Math.max(0, day.answers + answers),
-            correct: Math.max(0, day.correct + correct)
+            correct: Math.max(0, day.correct + correct),
+            newWords: Math.max(0, (day.newWords ?? 0) + newWords)
           } satisfies DailyActivity);
         } catch (error) {
           reject(error);
@@ -159,10 +142,76 @@ export class StudySetRepository {
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(transaction.error);
     });
-    database.close();
   }
 
-  private openDatabase(): Promise<IDBDatabase> {
+  // Restaurar una copia de seguridad: todo en una transacción, así si algo falla se queda lo que había.
+  replaceAll(studySets: StoredStudySet[], activity: DailyActivity[]): Promise<void> {
+    return this.transaction([this.storeName, this.activityStoreName], 'readwrite', (transaction, resolve, reject) => {
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+      transaction.onabort = () => reject(transaction.error);
+
+      try {
+        const store = transaction.objectStore(this.storeName);
+        const activityStore = transaction.objectStore(this.activityStoreName);
+        store.clear();
+        activityStore.clear();
+        // La clave se vuelve a calcular: la de la copia podría ser de otra forma de normalizar.
+        studySets.forEach(studySet => store.put({ ...studySet, id: this.getStudySetId(studySet.topic) }));
+        activity.forEach(day => activityStore.put(day));
+      } catch (error) {
+        reject(error);
+        transaction.abort();
+      }
+    });
+  }
+
+  // Una transacción con la conexión compartida: `run` hace sus peticiones y resuelve o rechaza. Si la conexión ya no
+  // sirve (Safari la pierde a veces tras un rato en segundo plano), se abre otra y se reintenta una vez: la transacción
+  // fallida no guardó nada, así que repetirla es seguro.
+  private async transaction<T>(
+    storeNames: string | string[],
+    mode: IDBTransactionMode,
+    run: (transaction: IDBTransaction, resolve: (value: T) => void, reject: (error: unknown) => void) => void,
+    retry = true
+  ): Promise<T> {
+    const connection = this.getDatabase();
+    const database = await connection;
+    try {
+      // Con la conexión cerrada, transaction() lanza y la promesa se rechaza.
+      return await new Promise<T>((resolve, reject) => run(database.transaction(storeNames, mode), resolve, reject));
+    } catch (error) {
+      if (!retry || !this.isLostConnection(error)) throw error;
+      console.warn('Se perdió la conexión con la base de datos: se abre otra', error);
+      this.forget(connection);
+      return this.transaction(storeNames, mode, run, false);
+    }
+  }
+
+  private isLostConnection(error: unknown): boolean {
+    return error instanceof DOMException && (error.name === 'InvalidStateError' || error.name === 'UnknownError');
+  }
+
+  private getDatabase(): Promise<IDBDatabase> {
+    if (!this.connection) {
+      const connection = this.openDatabase(() => this.forget(connection));
+      // Si no se pudo abrir, la próxima operación lo vuelve a intentar.
+      connection.catch(() => this.forget(connection));
+      this.connection = connection;
+    }
+    return this.connection;
+  }
+
+  // Solo si sigue siendo la actual: una más nueva no se descarta.
+  private forget(connection: Promise<IDBDatabase>) {
+    if (this.connection === connection) {
+      this.connection = undefined;
+    }
+  }
+
+  // `onLost`: la conexión se cerró sin pedirlo (p. ej. el navegador al borrar los datos del sitio, o por una versión
+  // nueva del esquema).
+  private openDatabase(onLost: () => void): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.databaseName, databaseVersion);
       request.onupgradeneeded = event => {
@@ -181,8 +230,10 @@ export class StudySetRepository {
         // Otra pestaña abre la versión nueva: cerrar para no bloquear su actualización del esquema.
         database.onversionchange = () => {
           database.close();
+          onLost();
           location.reload();
         };
+        database.onclose = onLost;
         resolve(database);
       };
       request.onerror = () => {

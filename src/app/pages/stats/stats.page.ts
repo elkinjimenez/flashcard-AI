@@ -1,20 +1,26 @@
 import { Component, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { merge } from 'rxjs';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
   IonContent, IonSpinner, IonIcon, IonButton
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { bulbOutline, chevronForward, imageOutline, statsChartOutline, volumeHighOutline } from 'ionicons/icons';
+import {
+  barbellOutline, bulbOutline, chevronForward, imageOutline, statsChartOutline, volumeHighOutline
+} from 'ionicons/icons';
 import { DailyActivity } from 'src/app/services/study-set-repository';
 import { HardWord, Stats, StatsService, TopicStats, WordStage } from 'src/app/services/stats';
 import { FlashcardService } from 'src/app/services/flashcard';
+import { DayChangeService } from 'src/app/services/day-change';
 import { mnemonicMisses } from 'src/app/services/flashcard.model';
+import { loadEnglishLevel } from 'src/app/services/english-level';
 import { PronunciationService } from 'src/app/services/pronunciation';
 import { describeRequestError } from 'src/app/services/request-error';
 import { toTopicKey } from 'src/app/services/topic-key';
 import { ToastService } from 'src/app/services/toast';
+import { CardImageDirective } from 'src/app/card-image.directive';
 
 const weekdayInitials = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 const weekdayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -34,12 +40,14 @@ const todayIndex = 6;
   standalone: true,
   imports: [
     CommonModule, RouterLink,
-    IonContent, IonSpinner, IonIcon, IonButton
+    IonContent, IonSpinner, IonIcon, IonButton,
+    CardImageDirective
   ],
   templateUrl: './stats.page.html',
   styleUrls: ['./stats.page.scss'],
 })
 export class StatsPage {
+  private router = inject(Router);
   private statsService = inject(StatsService);
   private flashcardService = inject(FlashcardService);
   private toast = inject(ToastService);
@@ -55,10 +63,14 @@ export class StatsPage {
   selectedDay = todayIndex;
   // Palabras cuyo truco está creando la IA.
   creatingMnemonics = new Set<HardWord>();
+  // Se está preparando la práctica de las que más cuestan.
+  practicingHard = false;
 
   constructor() {
-    addIcons({ bulbOutline, chevronForward, imageOutline, statsChartOutline, volumeHighOutline });
-    this.flashcardService.cardsChanged.pipe(takeUntilDestroyed()).subscribe(() => this.load());
+    addIcons({ barbellOutline, bulbOutline, chevronForward, imageOutline, statsChartOutline, volumeHighOutline });
+    merge(this.flashcardService.cardsChanged, inject(DayChangeService).dayChanged)
+      .pipe(takeUntilDestroyed())
+      .subscribe(() => this.load());
   }
 
   speak(item: HardWord) {
@@ -87,7 +99,36 @@ export class StatsPage {
     }
   }
 
-  // En cada visita y al terminar una sesión de práctica: los números cambian.
+  get practiceHardLabel(): string {
+    const count = this.stats?.hardestWords.length ?? 0;
+    return count === 1 ? 'Practicar esta palabra' : `Practicar estas ${count} palabras`;
+  }
+
+  // Una sesión con las de la lista, aunque aún no les toque repaso: acertarlas no adelanta su calendario (ver
+  // applyAnswer), fallarlas sí cuenta.
+  async practiceHard() {
+    const words = this.stats?.hardestWords ?? [];
+    if (this.practicingHard || !words.length) return;
+
+    this.practicingHard = true;
+    try {
+      const session = await this.flashcardService.prepareWords(words, loadEnglishLevel());
+      if (!session.cards.length) {
+        await this.load();
+        return;
+      }
+      await this.router.navigate(['/flashcards'], {
+        state: { ...session, title: 'Las que más te cuestan', returnUrl: '/tabs/progress' }
+      });
+    } catch (error) {
+      console.error('No se pudo preparar la práctica', error);
+      this.toast.show(`No se pudo preparar la práctica. ${describeRequestError(error)}`, { color: 'danger', duration: 5000 });
+    } finally {
+      this.practicingHard = false;
+    }
+  }
+
+  // En cada visita, al terminar una sesión de práctica y al empezar un día nuevo: los números cambian.
   ionViewWillEnter() {
     return this.load();
   }
@@ -138,8 +179,9 @@ export class StatsPage {
     return `${name}: ${this.count(day.answers, 'respuesta', 'respuestas')}, ${this.percent(day.correct / day.answers)} de aciertos`;
   }
 
-  topicPercent(topic: TopicStats): number {
-    return topic.known / topic.total * 100;
+  // Parte del tema que son `count` palabras, para su medidor.
+  topicPercent(topic: TopicStats, count: number): number {
+    return count / topic.total * 100;
   }
 
   // Para abrir la lista de sus palabras.

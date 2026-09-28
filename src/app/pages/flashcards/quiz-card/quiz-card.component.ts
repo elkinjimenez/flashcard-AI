@@ -4,6 +4,7 @@ import { IonButton, IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { checkmarkCircle, closeCircle, imageOutline, volumeHighOutline } from 'ionicons/icons';
 import { Flashcard } from 'src/app/services/flashcard';
+import { CardImageDirective } from 'src/app/card-image.directive';
 
 // pick-image: palabra → elegir su imagen. pick-word: imagen → elegir su palabra. listen: oír la palabra → elegir su imagen.
 export type QuizKind = 'pick-image' | 'pick-word' | 'listen';
@@ -13,7 +14,7 @@ export type QuizOptionState = 'correct' | 'wrong' | 'dimmed' | null;
 @Component({
   selector: 'app-quiz-card',
   standalone: true,
-  imports: [CommonModule, IonButton, IonIcon],
+  imports: [CommonModule, IonButton, IonIcon, CardImageDirective],
   templateUrl: './quiz-card.component.html',
   styleUrls: ['./quiz-card.component.scss'],
 })

@@ -4,10 +4,18 @@
     <p class="page-eyebrow">{{ dateLabel }}</p>
     <h1 class="page-title">{{ title }}</h1>
     <p class="page-intro" *ngIf="intro">{{ intro }}</p>
-    <span class="streak" *ngIf="stats?.totalWords" [class.active]="streak">
-      <ion-icon name="flame" aria-hidden="true"></ion-icon>
-      {{ streakLabel }}
-    </span>
+    <div class="badges" *ngIf="stats?.totalWords">
+      <span class="streak" [class.active]="streak">
+        <ion-icon name="flame" aria-hidden="true"></ion-icon>
+        {{ streakLabel }}
+      </span>
+      <!-- La pastilla se va llenando hasta la meta de Ajustes. -->
+      <span class="goal" [class.done]="goalReached">
+        <span class="goal-fill" [style.width.%]="goalPercent" aria-hidden="true"></span>
+        <ion-icon [name]="goalReached ? 'checkmark-circle' : 'flag-outline'" aria-hidden="true"></ion-icon>
+        {{ goalLabel }}
+      </span>
+    </div>
   </header>
 
   <div class="today-loading" *ngIf="loading" aria-live="polite">
@@ -19,6 +27,15 @@
 
   <section *ngIf="dueTopics.length" aria-labelledby="due-title">
     <h2 class="section-title" id="due-title">Para repasar hoy</h2>
+    <!-- Con varios temas: todos sus repasos, mezclados en una sesión. -->
+    <ion-button *ngIf="dueTopics.length > 1" expand="block" class="review-all-btn" [disabled]="!!reviewing"
+      (click)="reviewAll()">
+      <ion-spinner *ngIf="reviewingAll" name="crescent"></ion-spinner>
+      <ng-container *ngIf="!reviewingAll">
+        <ion-icon slot="start" name="shuffle-outline" aria-hidden="true"></ion-icon>
+        {{ reviewAllLabel }}
+      </ng-container>
+    </ion-button>
     <ul class="due-list">
       <li *ngFor="let topic of dueTopics">
         <span class="due-icon"><ion-icon [name]="icon(topic)" aria-hidden="true"></ion-icon></span>
@@ -35,9 +52,9 @@
     </ul>
   </section>
 
-  <!-- Sin repasos: a por palabras nuevas. -->
+  <!-- Sin repasos: a por palabras nuevas (si no llegó al tope de hoy). -->
   <ion-button *ngIf="stats && !dueTopics.length" expand="block" class="topics-btn" [routerLink]="['/tabs/topics']">
-    {{ stats.totalWords ? 'Aprender palabras nuevas' : 'Elegir un tema' }}
+    {{ !stats.totalWords ? 'Elegir un tema' : newWordsLeft ? 'Aprender palabras nuevas' : 'Ver temas' }}
     <ion-icon slot="end" name="arrow-forward-outline" aria-hidden="true"></ion-icon>
   </ion-button>
 

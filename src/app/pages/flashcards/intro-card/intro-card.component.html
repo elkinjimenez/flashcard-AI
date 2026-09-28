@@ -6,7 +6,7 @@
 
   <div class="exercise-image">
     <!-- alt vacío: la palabra ya está escrita debajo. -->
-    <img *ngIf="!imageUnavailable" [src]="card.imageUrl" alt="" crossorigin="anonymous" draggable="false"
+    <img appCardImage *ngIf="!imageUnavailable" [src]="card.imageUrl" alt="" crossorigin="anonymous" draggable="false"
       [class.ready]="imageReady" (load)="onImageLoad(card.imageUrl)" (error)="onImageError(card.imageUrl)" />
     <div class="image-fallback" *ngIf="imageUnavailable">
       <ion-icon name="image-outline" aria-hidden="true"></ion-icon>

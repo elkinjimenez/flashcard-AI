@@ -6,6 +6,7 @@ import { bulbOutline, imageOutline, mic, volumeHighOutline } from 'ionicons/icon
 import { Flashcard } from 'src/app/services/flashcard';
 import { SpeechRecognitionError, SpeechRecognitionService } from 'src/app/services/speech-recognition';
 import { isSameWord, normalizeAnswer, wordPattern } from 'src/app/services/word-forms';
+import { CardImageDirective } from 'src/app/card-image.directive';
 
 // blocked: sin micrófono o sin permiso.
 type SpeakState = 'idle' | 'listening' | 'blocked' | 'correct' | 'wrong';
@@ -28,7 +29,7 @@ const defaultMessage = 'Toca el micrófono y di la palabra en inglés.';
 @Component({
   selector: 'app-speak-card',
   standalone: true,
-  imports: [CommonModule, IonButton, IonIcon],
+  imports: [CommonModule, IonButton, IonIcon, CardImageDirective],
   templateUrl: './speak-card.component.html',
   styleUrls: ['./speak-card.component.scss'],
 })

@@ -1,0 +1,108 @@
+// Mismo lenguaje que Progreso: paneles sobre el fondo gris claro.
+ion-content {
+  --background: var(--app-bg);
+}
+
+.panel {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: 18px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-card);
+}
+
+.panel-title {
+  margin: 0;
+  color: var(--app-text);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.panel-note {
+  margin: 4px 0 14px;
+  color: var(--app-text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+// El nombre de la opción elegida, bajo su selector.
+.setting-value {
+  margin: 10px 4px 0;
+  color: var(--ion-color-primary);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.setting-label {
+  margin: 18px 0 10px;
+  color: var(--app-text-heading);
+  font-family: var(--ion-font-family);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+// Cinco niveles: sin el ancho mínimo de iOS no se recortan en pantallas estrechas.
+.pill-segment ion-segment-button {
+  min-width: 0;
+}
+
+.voice-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voice-select {
+  flex: 1;
+  min-width: 0;
+  min-height: 56px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: var(--app-bg-sunken);
+  --highlight-color-focused: var(--ion-color-primary);
+  font-weight: 700;
+}
+
+.test-voice {
+  --color: var(--ion-color-primary);
+  --background: var(--app-primary-soft);
+  --border-radius: 14px;
+  width: 56px;
+  height: 56px;
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.setting-toggle {
+  min-height: 44px;
+  color: var(--app-text-body);
+  font-size: 0.9rem;
+  font-weight: 700;
+  --track-background-checked: var(--ion-color-primary);
+}
+
+.backup-summary {
+  margin: 0 0 14px;
+  color: var(--app-text-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.backup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  ion-button {
+    --border-radius: 16px;
+    min-height: 48px;
+    margin: 0;
+    font-weight: 700;
+  }
+
+  ion-button[fill='outline'] {
+    --border-color: var(--app-primary-outline);
+    --border-width: 1.5px;
+  }
+}

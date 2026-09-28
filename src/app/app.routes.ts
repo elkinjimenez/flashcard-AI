@@ -30,6 +30,10 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/stats/stats.page').then(m => m.StatsPage)
       },
       {
+        path: 'settings',
+        loadComponent: () => import('./pages/settings/settings.page').then(m => m.SettingsPage)
+      },
+      {
         path: '',
         redirectTo: 'today',
         pathMatch: 'full'

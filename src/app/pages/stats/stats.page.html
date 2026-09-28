@@ -84,7 +84,8 @@
 
       <section class="panel">
         <h2 class="panel-title">Por tema</h2>
-        <p class="panel-note">Toca un tema para ver sus palabras.</p>
+        <p class="panel-note">Sabes las afianzadas y aprendidas; en claro, las que estás aprendiendo. Toca un tema para
+          ver sus palabras.</p>
         <ul class="topic-list">
           <li *ngFor="let topic of s.topics">
             <a class="topic-link" [routerLink]="['/topic-words', topicKey(topic)]" [state]="{ returnUrl: '/tabs/progress' }"
@@ -99,7 +100,8 @@
               </div>
               <div class="meter" role="progressbar" aria-valuemin="0" [attr.aria-valuemax]="topic.total"
                 [attr.aria-valuenow]="topic.known" [attr.aria-label]="'Sabes ' + topic.known + ' de ' + topic.total + ' palabras de ' + topic.topic">
-                <span class="meter-fill" [style.width.%]="topicPercent(topic)"></span>
+                <span class="meter-fill" [style.width.%]="topicPercent(topic, topic.known)"></span>
+                <span class="meter-fill learning" [style.width.%]="topicPercent(topic, topic.learning)"></span>
               </div>
             </a>
           </li>
@@ -111,11 +113,19 @@
         <p class="panel-note" *ngIf="s.hardestWords.length">Desde {{ mnemonicMisses }} fallos, la IA te propone un truco
           para recordarlas: algo en español que suena parecido.</p>
         <p class="panel-note" *ngIf="!s.hardestWords.length">Cuando falles una palabra, aparecerá aquí para que la tengas presente.</p>
+        <ion-button *ngIf="s.hardestWords.length" expand="block" class="practice-hard-btn" [disabled]="practicingHard"
+          (click)="practiceHard()">
+          <ion-spinner *ngIf="practicingHard" name="crescent"></ion-spinner>
+          <ng-container *ngIf="!practicingHard">
+            <ion-icon slot="start" name="barbell-outline" aria-hidden="true"></ion-icon>
+            {{ practiceHardLabel }}
+          </ng-container>
+        </ion-button>
         <ul class="hard-list" *ngIf="s.hardestWords.length">
           <li *ngFor="let item of s.hardestWords">
             <div class="hard-row">
               <!-- crossorigin: así el service worker la guarda para verla sin conexión (ver ngsw-config.json). -->
-              <img *ngIf="item.imageUrl; else noImage" [src]="item.imageUrl" alt="" crossorigin="anonymous" loading="lazy" />
+              <img appCardImage *ngIf="item.imageUrl; else noImage" [src]="item.imageUrl" alt="" crossorigin="anonymous" loading="lazy" />
               <ng-template #noImage>
                 <span class="hard-no-image"><ion-icon name="image-outline" aria-hidden="true"></ion-icon></span>
               </ng-template>

@@ -5,6 +5,8 @@ ion-tabs {
 
 // Píldora flotante de vidrio (estilo iOS 26): el contenido pasa por detrás, desenfocado.
 ion-tab-bar {
+  // Pestañas de la barra (tabs en tabs.page.ts).
+  --tab-count: 4;
   --background: transparent;
   --border: 0;
   --color: var(--app-text-faint);
@@ -28,13 +30,13 @@ ion-tab-bar {
   -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
-// Burbuja detrás del icono activo: 1/3 de la barra (una por pestaña), se desliza hasta la pestaña.
+// Burbuja detrás del icono activo: una parte de la barra por pestaña, se desliza hasta la pestaña.
 .tab-indicator {
   position: absolute;
   top: 4px;
   bottom: 4px;
   left: 8px;
-  width: calc((100% - 16px) / 3);
+  width: calc((100% - 16px) / var(--tab-count));
   pointer-events: none;
   transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
 

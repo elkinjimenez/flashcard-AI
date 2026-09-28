@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -11,6 +12,7 @@ import { Flashcard, FlashcardService } from 'src/app/services/flashcard';
 import { WordStage, wordStage } from 'src/app/services/stats';
 import { normalizeAnswer } from 'src/app/services/word-forms';
 import { ToastService } from 'src/app/services/toast';
+import { CardImageDirective } from 'src/app/card-image.directive';
 
 const stageLabels: Record<WordStage, string> = {
   new: 'Nueva',
@@ -32,7 +34,8 @@ type WordAction = 'edit' | 'learned' | 'delete';
   standalone: true,
   imports: [
     CommonModule,
-    IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonIcon, IonSearchbar, IonSpinner
+    IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonIcon, IonSearchbar, IonSpinner,
+    CardImageDirective
   ],
   templateUrl: './topic-words.page.html',
   styleUrls: ['./topic-words.page.scss'],
@@ -58,6 +61,8 @@ export class TopicWordsPage {
 
   constructor() {
     addIcons({ arrowBackOutline, ellipsisHorizontal, imageOutline });
+    // Una imagen que ya no existe se quitó de su tarjeta: la lista la muestra sin ella.
+    this.flashcardService.imageDropped.pipe(takeUntilDestroyed()).subscribe(() => this.readWords());
   }
 
   async ionViewWillEnter() {

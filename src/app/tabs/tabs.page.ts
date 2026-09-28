@@ -2,7 +2,7 @@ import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject } fr
 import { Router } from '@angular/router';
 import { Gesture, GestureController, IonIcon, IonTabBar, IonTabButton, IonTabs } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { libraryOutline, statsChartOutline, todayOutline } from 'ionicons/icons';
+import { libraryOutline, settingsOutline, statsChartOutline, todayOutline } from 'ionicons/icons';
 
 // Arrastre del contenido entre pestañas: la página actual y, si la hay, la vecina que asoma a su lado.
 interface Drag {
@@ -13,7 +13,8 @@ interface Drag {
   released?: boolean;
 }
 
-const tabs = ['today', 'topics', 'progress'];
+// Tantas como --tab-count en tabs.page.scss.
+const tabs = ['today', 'topics', 'progress', 'settings'];
 const tabsPrefix = '/tabs/';
 const slideTransition = 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)';
 
@@ -42,7 +43,7 @@ export class TabsPage implements AfterViewInit, OnDestroy {
   private draggingOnBar = false;
 
   constructor() {
-    addIcons({ libraryOutline, statsChartOutline, todayOutline });
+    addIcons({ libraryOutline, settingsOutline, statsChartOutline, todayOutline });
   }
 
   get currentIndex(): number {

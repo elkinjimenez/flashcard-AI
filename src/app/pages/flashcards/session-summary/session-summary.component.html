@@ -43,7 +43,7 @@
     <ul>
       <li class="word-row" *ngFor="let row of rows" [attr.data-outcome]="row.outcome">
         <!-- crossorigin: así el service worker la guarda para verla sin conexión (ver ngsw-config.json). -->
-        <img *ngIf="row.card.imageUrl; else noImage" [src]="row.card.imageUrl" alt="" crossorigin="anonymous"
+        <img appCardImage *ngIf="row.card.imageUrl; else noImage" [src]="row.card.imageUrl" alt="" crossorigin="anonymous"
           loading="lazy" />
         <ng-template #noImage>
           <span class="no-image"><ion-icon name="image-outline" aria-hidden="true"></ion-icon></span>

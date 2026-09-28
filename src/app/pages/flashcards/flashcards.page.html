@@ -9,7 +9,8 @@
       <span class="session-heading">
         <span class="progress-label">{{ topic }}</span>
         <span class="progress-divider" aria-hidden="true"></span>
-        <span class="progress-count">{{ currentIndex + 1 }} de {{ cards.length }}</span>
+        <span class="progress-count" [attr.aria-label]="completedWords + ' de ' + sessionWords + ' palabras completadas'"
+          title="Palabras completadas">{{ completedWords }} de {{ sessionWords }}</span>
       </span>
     </ion-title>
     <ion-buttons slot="end" *ngIf="canChangeImage">
@@ -35,7 +36,7 @@
     No se pudieron cargar las tarjetas.
   </p>
 
-  <app-session-summary *ngIf="summary" [summary]="summary" [topic]="topic" (reviewHard)="reviewHardCards()"
+  <app-session-summary *ngIf="summary" [summary]="summary" [topic]="storyTopic" (reviewHard)="reviewHardCards()"
     (undo)="undo()" (exit)="exitStudy()"></app-session-summary>
 
   <app-intro-card class="quiz-scene" *ngIf="!loading && !loadingError && !summary && exercise === 'intro'"
@@ -94,7 +95,7 @@
             <!-- alt vacío: el texto alternativo delataría la palabra; la tarjeta ya tiene su aria-label. -->
             <!-- crossorigin: sin él la respuesta es opaca y el service worker no la guarda para verla sin conexión
                  (ver dataGroups en ngsw-config.json). Klipy lo permite. -->
-            <img [src]="card.imageUrl" alt="" crossorigin="anonymous" draggable="false" (load)="onImageLoaded()"
+            <img appCardImage [src]="card.imageUrl" alt="" crossorigin="anonymous" draggable="false" (load)="onImageLoaded()"
               (error)="onImageError()" />
           </ng-container>
         </div>

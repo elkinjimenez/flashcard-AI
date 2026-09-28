@@ -123,7 +123,9 @@ ion-content {
     font-variant-numeric: tabular-nums;
   }
 
+  // Las que sabe y, en un azul más claro, las que está aprendiendo.
   .topic-progress-bar {
+    display: flex;
     flex: 1;
     height: 4px;
     overflow: hidden;
@@ -131,10 +133,12 @@ ion-content {
     background: var(--app-fill);
 
     span {
-      display: block;
       height: 100%;
-      border-radius: inherit;
       background: var(--ion-color-primary);
+    }
+
+    .learning {
+      background: var(--app-blue-300);
     }
   }
 
@@ -173,6 +177,10 @@ ion-content {
 
       span {
         background: var(--ion-color-primary-contrast);
+      }
+
+      .learning {
+        background: rgba(var(--ion-color-primary-contrast-rgb), 0.55);
       }
     }
   }
@@ -223,23 +231,6 @@ ion-content {
   strong {
     color: var(--ion-color-primary);
     font-weight: 800;
-  }
-}
-
-.card-count-segment,
-.level-segment {
-  --background: rgba(var(--app-ink-rgb), 0.08);
-  border-radius: 22px;
-  --indicator-color: var(--app-surface);
-  min-height: 48px;
-  padding: 4px;
-  overflow: hidden;
-
-  ion-segment-button {
-    --border-radius: 16px;
-    min-height: 40px;
-    font-size: 0.82rem;
-    font-weight: 700;
   }
 }
 

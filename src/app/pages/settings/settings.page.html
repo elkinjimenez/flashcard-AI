@@ -1,0 +1,127 @@
+<ion-content class="ion-padding">
+
+  <header class="page-heading">
+    <p class="page-eyebrow">Tu app</p>
+    <h1 class="page-title">Ajustes</h1>
+    <p class="page-intro">Tu nivel, tu meta, cómo suena y cómo se ve la app. Todo se guarda al cambiarlo.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="level-title">
+    <h2 class="panel-title" id="level-title">Nivel de inglés</h2>
+    <p class="panel-note">Decide la dificultad de las palabras nuevas, de sus frases de ejemplo y de las historias.</p>
+    <ion-segment class="pill-segment" mode="ios" aria-labelledby="level-title" [ngModel]="level"
+      (ngModelChange)="setLevel($event)">
+      <ion-segment-button *ngFor="let option of levels" [value]="option.id">
+        <ion-label>{{ option.id }}</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+    <p class="setting-value">{{ levelLabel }}</p>
+  </section>
+
+  <section class="panel" aria-labelledby="goal-title">
+    <h2 class="panel-title" id="goal-title">Meta diaria</h2>
+    <p class="panel-note">Respuestas al día. En Hoy verás cuánto te falta; una sesión de 10 palabras son unas 10 a 15.</p>
+    <ion-segment class="pill-segment" mode="ios" aria-labelledby="goal-title" [ngModel]="dailyGoal"
+      (ngModelChange)="setDailyGoal($event)">
+      <ion-segment-button *ngFor="let option of goals" [value]="option.id">
+        <ion-label>{{ option.id }}</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+    <p class="setting-value">{{ goalLabel }}</p>
+  </section>
+
+  <section class="panel" aria-labelledby="new-words-title">
+    <h2 class="panel-title" id="new-words-title">Palabras nuevas al día</h2>
+    <p class="panel-note">Cada palabra nueva vuelve al día siguiente, a los 3 días y a los 7. El tope evita que se te
+      junten demasiados repasos.</p>
+    <ion-segment class="pill-segment" mode="ios" aria-labelledby="new-words-title" [ngModel]="newWordsLimit"
+      (ngModelChange)="setNewWordsLimit($event)">
+      <ion-segment-button *ngFor="let option of newWordsLimits" [value]="option.id">
+        <ion-label>{{ option.id }}</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+    <p class="setting-value">{{ newWordsLimitLabel }}</p>
+  </section>
+
+  <section class="panel" aria-labelledby="voice-title">
+    <h2 class="panel-title" id="voice-title">Pronunciación</h2>
+    <ng-container *ngIf="canSpeak; else noSpeech">
+      <p class="panel-note">La voz que lee las palabras y las frases. Las voces son las de tu dispositivo.</p>
+      <div class="voice-row">
+        <ion-select class="voice-select" label="Voz" labelPlacement="stacked" interface="alert"
+          [interfaceOptions]="{ header: 'Voz' }" okText="Elegir" cancelText="Cancelar" [ngModel]="voiceId"
+          (ngModelChange)="setVoice($event)">
+          <ion-select-option [value]="automaticVoice">
+            Automática{{ automaticVoiceLabel ? ' (' + automaticVoiceLabel + ')' : '' }}
+          </ion-select-option>
+          <ion-select-option *ngFor="let voice of voices" [value]="voice.id">{{ voice.label }}</ion-select-option>
+        </ion-select>
+        <ion-button fill="clear" class="test-voice" (click)="testVoice()" aria-label="Probar la voz"
+          title="Probar la voz">
+          <ion-icon slot="icon-only" name="volume-high-outline"></ion-icon>
+        </ion-button>
+      </div>
+
+      <h3 class="setting-label" id="rate-title">Velocidad</h3>
+      <ion-segment class="pill-segment" mode="ios" aria-labelledby="rate-title" [ngModel]="rate"
+        (ngModelChange)="setRate($event)">
+        <ion-segment-button *ngFor="let option of rates" [value]="option.id">
+          <ion-label>{{ option.label }}</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </ng-container>
+    <ng-template #noSpeech>
+      <p class="panel-note">Este navegador no puede pronunciar: no tiene síntesis de voz.</p>
+    </ng-template>
+  </section>
+
+  <section class="panel" aria-labelledby="feedback-title">
+    <h2 class="panel-title" id="feedback-title">Al responder</h2>
+    <p class="panel-note">Te dicen si acertaste sin tener que mirar.</p>
+    <ion-toggle class="setting-toggle" justify="space-between" [ngModel]="sounds" (ngModelChange)="setSounds($event)">
+      Sonido suave
+    </ion-toggle>
+    <ion-toggle *ngIf="canVibrate" class="setting-toggle" justify="space-between" [ngModel]="vibration"
+      (ngModelChange)="setVibration($event)">
+      Vibración corta
+    </ion-toggle>
+  </section>
+
+  <section class="panel" aria-labelledby="theme-title">
+    <h2 class="panel-title" id="theme-title">Apariencia</h2>
+    <p class="panel-note">Con «Sistema», la app sigue el modo claro u oscuro de tu dispositivo.</p>
+    <ion-segment class="pill-segment" mode="ios" aria-labelledby="theme-title" [ngModel]="themeMode"
+      (ngModelChange)="setTheme($event)">
+      <ion-segment-button *ngFor="let option of themeModes" [value]="option.id" layout="icon-start">
+        <ion-icon [name]="option.icon" aria-hidden="true"></ion-icon>
+        <ion-label>{{ option.label }}</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </section>
+
+  <section class="panel" aria-labelledby="backup-title">
+    <h2 class="panel-title" id="backup-title">Copia de seguridad</h2>
+    <p class="panel-note">Tus temas y tu progreso solo se guardan en este dispositivo. Descarga una copia para no
+      perderlos o para pasarlos a otro.
+      <ng-container *ngIf="persistence === 'persisted'">El navegador no los borrará aunque le falte espacio.</ng-container>
+      <ng-container *ngIf="persistence === 'best-effort'">Si le falta espacio, el navegador podría borrarlos: instalar
+        la app ayuda a evitarlo.</ng-container>
+    </p>
+    <p class="backup-summary" *ngIf="summary">
+      Ahora tienes {{ count(summary.topics, 'tema', 'temas') }} y {{ count(summary.words, 'palabra', 'palabras') }}.
+    </p>
+    <div class="backup-actions">
+      <ion-button expand="block" [disabled]="downloading || restoring" (click)="downloadBackup()">
+        <ion-icon slot="start" name="download-outline" aria-hidden="true"></ion-icon>
+        Descargar copia
+      </ion-button>
+      <ion-button expand="block" fill="outline" [disabled]="downloading || restoring" (click)="chooseBackupFile()">
+        <ion-spinner *ngIf="restoring" name="crescent"></ion-spinner>
+        <ion-icon *ngIf="!restoring" slot="start" name="cloud-upload-outline" aria-hidden="true"></ion-icon>
+        {{ restoring ? ' Restaurando...' : 'Restaurar copia' }}
+      </ion-button>
+    </div>
+    <input #backupFile type="file" accept="application/json,.json" hidden (change)="restoreBackup($event)" />
+  </section>
+
+</ion-content>

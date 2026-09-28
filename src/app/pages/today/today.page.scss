@@ -3,12 +3,19 @@ ion-content {
   --background: var(--app-bg);
 }
 
-// Gris sin racha; naranja con racha.
-.streak {
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+// Pastillas bajo el título. La racha, gris sin racha y naranja con ella.
+.streak,
+.goal {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 16px;
   padding: 6px 12px;
   border-radius: 999px;
   background: var(--app-fill);
@@ -26,6 +33,38 @@ ion-content {
 
     ion-icon {
       color: var(--app-orange-500);
+    }
+  }
+}
+
+// Se llena de azul según las respuestas de hoy; verde al cumplirla.
+.goal {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+
+  .goal-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    z-index: -1;
+    background: rgba(var(--ion-color-primary-rgb), 0.18);
+    transition: width 0.4s ease;
+  }
+
+  ion-icon {
+    color: var(--ion-color-primary);
+  }
+
+  &.done {
+    background: rgba(var(--ion-color-success-rgb), 0.14);
+    color: var(--ion-color-success);
+
+    .goal-fill {
+      display: none;
+    }
+
+    ion-icon {
+      color: var(--ion-color-success);
     }
   }
 }
@@ -114,6 +153,19 @@ ion-content {
   ion-spinner {
     width: 18px;
     height: 18px;
+  }
+}
+
+// El principal cuando hay varios temas: encima de la lista, que repasa tema a tema.
+.review-all-btn {
+  margin: 0 0 12px;
+  --border-radius: 16px;
+  --box-shadow: var(--app-shadow-primary);
+  font-weight: 800;
+
+  ion-spinner {
+    width: 20px;
+    height: 20px;
   }
 }
 

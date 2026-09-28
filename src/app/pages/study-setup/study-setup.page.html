@@ -3,17 +3,9 @@
   <header class="page-heading">
     <p class="page-eyebrow">Tu próxima sesión</p>
     <h1 class="page-title">¿Qué quieres <br> aprender hoy?</h1>
-    <p class="page-intro">Elige un tema y crea una sesión a tu medida.</p>
+    <p class="page-intro">Elige un tema y crea una sesión a tu medida, con palabras de nivel
+      <strong>{{ level }} · {{ levelLabel }}</strong> (se cambia en Ajustes).</p>
   </header>
-
-  <h2 class="section-title" id="level-title">Tu nivel de inglés</h2>
-  <ion-segment class="level-segment" mode="ios" aria-labelledby="level-title" [ngModel]="level"
-    (ngModelChange)="setLevel($event)">
-    <ion-segment-button *ngFor="let option of levels" [value]="option.id">
-      <ion-label>{{ option.id }}</ion-label>
-    </ion-segment-button>
-  </ion-segment>
-  <p class="section-hint"><strong>{{ levelLabel }}</strong> · Las palabras nuevas se eligen para este nivel.</p>
 
   <ion-action-sheet [isOpen]="topicMenuOpen" [header]="menuTopic?.label ?? 'Tema guardado'" [buttons]="[
       { text: 'Ver palabras', handler: showSelectedTopicWords.bind(this) },
@@ -53,7 +45,8 @@
       <span class="topic-progress" *ngIf="topic.progress"
         [attr.title]="'Ya sabes ' + topic.progress.known + ' de ' + topic.progress.total + ' palabras'">
         <span class="topic-progress-bar">
-          <span [style.width.%]="topic.progress.total ? topic.progress.known * 100 / topic.progress.total : 0"></span>
+          <span [style.width.%]="progressPercent(topic.progress, topic.progress.known)"></span>
+          <span class="learning" [style.width.%]="progressPercent(topic.progress, topic.progress.learning)"></span>
         </span>
         {{ topic.progress.known }}/{{ topic.progress.total }}
       </span>
@@ -74,7 +67,7 @@
     <div class="count-row">
       <h2 class="section-title" id="count-title">¿Cuántas palabras?</h2>
 
-      <ion-segment class="card-count-segment" [(ngModel)]="cardCount" mode="ios" aria-labelledby="count-title"
+      <ion-segment class="pill-segment card-count-segment" [(ngModel)]="cardCount" mode="ios" aria-labelledby="count-title"
         [disabled]="loadingTopics || !!topicsError">
         <ion-segment-button [value]="10">
           <ion-label>10</ion-label>
@@ -90,8 +83,8 @@
 
     <div class="start-actions">
       <!-- La flecha está siempre (salvo al cargar): al elegir tema solo cambia el color, sin mover el texto. -->
-      <ion-button expand="block" size="large" class="start-btn" [class.idle]="!selectedTopic || nothingToPractice"
-        [disabled]="loadingTopics || !!topicsError || !!loadingCards || !selectedTopic || nothingToPractice"
+      <ion-button expand="block" size="large" class="start-btn" [class.idle]="cannotStart"
+        [disabled]="loadingTopics || !!topicsError || !!loadingCards || cannotStart"
         (click)="startStudy()">
         <ion-spinner *ngIf="loadingCards === 'practice'" name="crescent"></ion-spinner>
         {{ loadingCards === 'practice' ? (selectedSavedTopic ? 'Preparando...' : 'Generando tarjetas...') : 'Practicar' }}
@@ -107,19 +100,17 @@
 
       <!-- Solo en temas guardados: practicarlos no consulta a la IA; las palabras nuevas se piden a propósito. -->
       <ion-button *ngIf="selectedSavedTopic" size="large" fill="outline" class="new-words-btn"
-        [disabled]="!!loadingCards" (click)="addNewWords()"
-        [attr.aria-label]="'Añadir ' + cardCount + ' palabras nuevas con IA'"
-        [attr.title]="'Añadir ' + cardCount + ' palabras nuevas con IA'">
+        [disabled]="!!loadingCards || newWordsLimitReached" (click)="addNewWords()"
+        [attr.aria-label]="'Añadir ' + newWordsCount + ' palabras nuevas con IA'"
+        [attr.title]="'Añadir ' + newWordsCount + ' palabras nuevas con IA'">
         <ion-spinner *ngIf="loadingCards === 'new-words'" name="crescent"></ion-spinner>
         <ng-container *ngIf="loadingCards !== 'new-words'">
           <ion-icon slot="start" name="sparkles-outline" aria-hidden="true"></ion-icon>
-          +{{ cardCount }}
+          +{{ newWordsCount || cardCount }}
         </ng-container>
       </ion-button>
     </div>
-    <p class="section-hint" *ngIf="nothingToPractice">
-      Ya sabes todas las palabras de este tema y volverán cuando toque repasarlas. Añade nuevas para seguir.
-    </p>
+    <p class="section-hint" *ngIf="sessionHint as hint">{{ hint }}</p>
   </div>
 
 </ion-content>

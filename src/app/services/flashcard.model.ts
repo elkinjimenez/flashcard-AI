@@ -12,9 +12,10 @@ export interface Flashcard {
   imageQuery?: string;
   // Fecha (ISO) de la última búsqueda de imagen que no encontró nada: no se repite hasta pasado un día.
   imageSearchedAt?: string;
-  // Desde la caja 6 (learnedBox). Sigue saliendo en sus repasos de mantenimiento.
+  // Desde la caja 6 (learnedBox). Sigue saliendo en sus repasos de mantenimiento. Fallarla la quita de aprendidas hasta
+  // que acierte su próximo repaso, aunque siga en la caja 6 o más (ver boxAfterLapse).
   learned?: boolean;
-  // Caja de Leitner: 0 = nueva o fallada, 1..5 = aprendiendo, 6..8 = aprendida (repasos de mantenimiento).
+  // Caja de Leitner: 0 = nueva, 1..5 = aprendiendo, 6..8 = aprendida (repasos de mantenimiento).
   box?: number;
   // Veces que se ha fallado, para las estadísticas (se cuenta desde que existe el campo).
   misses?: number;
@@ -31,10 +32,27 @@ export const reviewIntervalDays = [1, 3, 7, 14, 30, 60, 120, 240];
 // Acertar el repaso de la caja 5 (a los 30 días) la sube aquí y la marca como aprendida.
 export const learnedBox = 6;
 
+// Cajas que baja una palabra al fallarla: no vuelve a empezar de cero (una de la caja 8 no espera meses para contar
+// otra vez como aprendida), pero sus repasos se acercan hasta que se afiance de nuevo.
+export const lapseBoxes = 2;
+
+export function boxAfterLapse(card: Flashcard): number {
+  return Math.max((card.box ?? 0) - lapseBoxes, 0);
+}
+
 // Fallos desde los que una palabra "cuesta": al fallarla se enseña su truco para recordarla, creado por la IA.
 export const mnemonicMisses = 2;
 
 // Nunca respondida (o de un tema reiniciado).
 export function isNewCard(card: Flashcard): boolean {
   return !card.learned && card.box === undefined && !card.nextReview;
+}
+
+// Desde esta caja la palabra está afianzada y cuenta como "ya la sabes": acertó el día que la empezó, al día siguiente y
+// a los 3 días. Acertarla una vez no basta: en la misma sesión se recuerda sin esfuerzo.
+export const knownFromBox = 3;
+
+// Afianzada o aprendida. Una aprendida que se falla baja a la caja 4 o más: sigue contando.
+export function isKnownCard(card: Flashcard): boolean {
+  return !!card.learned || (card.box ?? 0) >= knownFromBox;
 }

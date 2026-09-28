@@ -6,6 +6,7 @@
   --bar-selected: var(--app-blue-700);
   --meter-track: var(--app-blue-100);
   --meter-fill: var(--app-blue-600);
+  --meter-learning: var(--app-blue-300);
 }
 
 ion-content {
@@ -292,8 +293,10 @@ ion-content {
   }
 }
 
-// Medidor: el fondo es un paso más claro del mismo azul, así se lee todo el recorrido.
+// Medidor: el fondo es un paso más claro del mismo azul, así se lee todo el recorrido. Tras las que sabe, las que está
+// aprendiendo, en un azul intermedio.
 .meter {
+  display: flex;
   height: 8px;
   overflow: hidden;
   border-radius: 4px;
@@ -301,10 +304,24 @@ ion-content {
 }
 
 .meter-fill {
-  display: block;
   height: 100%;
-  border-radius: 4px;
   background: var(--meter-fill);
+
+  &.learning {
+    background: var(--meter-learning);
+  }
+}
+
+// Como "Repasar todo" en Hoy, sin sombra: ya va dentro del panel.
+.practice-hard-btn {
+  margin: 0 0 16px;
+  --border-radius: 14px;
+  font-weight: 800;
+
+  ion-spinner {
+    width: 20px;
+    height: 20px;
+  }
 }
 
 .hard-list li + li {

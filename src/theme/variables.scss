@@ -1,5 +1,7 @@
 // Tema de la app: paleta, roles y tipografía. Los estilos de los componentes solo usan estas variables, nunca colores
-// escritos a mano. Más en https://ionicframework.com/docs/theming/
+// escritos a mano. Claro por defecto; el oscuro, al final. Más en https://ionicframework.com/docs/theming/
+@use 'sass:color';
+
 :root {
   // Tipografía (las fuentes se cargan en global.scss). Bricolage Grotesque, con carácter, para títulos, palabras y
   // cifras; Figtree, más neutra, para el resto de la interfaz.
@@ -72,6 +74,10 @@
   --app-primary-soft: rgba(var(--ion-color-primary-rgb), 0.1);
   --app-primary-outline: rgba(var(--ion-color-primary-rgb), 0.35);
 
+  // Selectores de pastilla (global.scss): la pista y la opción elegida.
+  --app-control-track: rgba(var(--app-ink-rgb), 0.08);
+  --app-control-thumb: var(--app-surface);
+
   --app-shadow-card: 0 8px 20px rgba(var(--app-ink-rgb), 0.04);
   --app-shadow-control: 0 8px 20px rgba(var(--app-ink-rgb), 0.06);
   --app-shadow-tile: 0 10px 24px rgba(var(--app-ink-rgb), 0.1);
@@ -138,4 +144,110 @@
   --ion-color-dark-contrast-rgb: 255, 255, 255;
   --ion-color-dark-shade: #131928;
   --ion-color-dark-tint: #2d3343;
+}
+
+// ---- Tema oscuro ----
+// Lo pone ThemeService (y index.html al arrancar) en <html>. Las mismas variables con otros valores: en las escalas,
+// los tonos suaves pasan a ser los cercanos al fondo y los intensos los claros, así los gráficos y las etapas siguen
+// yendo de menos a más.
+:root.theme-dark {
+  $bg: #0e1220;
+  $text: #eef1f8;
+
+  --app-blue-100: #1b2553;
+  --app-blue-300: #2c3d85;
+  --app-blue-500: #3f62e0;
+  --app-blue-600: #4f72ee;
+  --app-blue-700: #7e98f4;
+  --app-blue-900: #bccbfb;
+
+  // Sombras, velos y texto sobre imágenes: negro.
+  --app-ink-rgb: 0, 0, 0;
+
+  --app-amber-50: #2e2410;
+  --app-amber-600: #f2b53a;
+  --app-amber-700: #f5c25a;
+  --app-amber-900: #fbe3a6;
+
+  --app-orange-50: #35200f;
+  --app-orange-500: #ff8c42;
+  --app-orange-700: #ffb27f;
+
+  --app-bg: #{$bg};
+  --app-bg-sunken: #0a0d18;
+  --app-surface: #171c2c;
+  --app-surface-rgb: 23, 28, 44;
+  --app-fill: #262d42;
+  --app-divider: #20263a;
+
+  --app-text: #{$text};
+  --app-text-heading: #d6dcea;
+  --app-text-body: #b7c0d2;
+  --app-text-muted: #909ab0;
+  --app-text-faint: #6c768c;
+
+  --app-border-subtle: rgba(255, 255, 255, 0.06);
+  --app-border: rgba(255, 255, 255, 0.09);
+  --app-border-strong: rgba(255, 255, 255, 0.18);
+
+  --app-primary-soft: rgba(var(--ion-color-primary-rgb), 0.18);
+  --app-primary-outline: rgba(var(--ion-color-primary-rgb), 0.55);
+
+  --app-control-track: rgba(255, 255, 255, 0.07);
+  --app-control-thumb: #343c56;
+
+  // ---- Ionic ----
+  // Fondos y textos de sus componentes (alertas, hojas de acciones, selectores): cada paso mezcla el fondo con el texto.
+
+  --ion-background-color: #{$bg};
+  --ion-background-color-rgb: 14, 18, 32;
+  --ion-text-color: #{$text};
+  --ion-text-color-rgb: 238, 241, 248;
+  @for $i from 1 through 19 {
+    --ion-background-color-step-#{$i * 50}: #{color.mix($text, $bg, $i * 5%)};
+    --ion-text-color-step-#{$i * 50}: #{color.mix($bg, $text, $i * 5%)};
+  }
+  --ion-item-background: var(--app-surface);
+  --ion-card-background: var(--app-surface);
+  --ion-toolbar-background: var(--app-surface);
+  --ion-border-color: var(--app-border);
+
+  --ion-color-primary: var(--app-blue-600);
+  --ion-color-primary-rgb: 79, 114, 238;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #4664d1;
+  --ion-color-primary-tint: #6180f0;
+
+  --ion-color-success: #1f9a55;
+  --ion-color-success-rgb: 31, 154, 85;
+  --ion-color-success-shade: #1b884b;
+  --ion-color-success-tint: #35a466;
+
+  --ion-color-danger: #e5484d;
+  --ion-color-danger-rgb: 229, 72, 77;
+  --ion-color-danger-shade: #ca3f44;
+  --ion-color-danger-tint: #e85a5f;
+
+  --ion-color-light: var(--app-fill);
+  --ion-color-light-rgb: 38, 45, 66;
+  --ion-color-light-contrast: #{$text};
+  --ion-color-light-contrast-rgb: 238, 241, 248;
+  --ion-color-light-shade: #21283a;
+  --ion-color-light-tint: #3c4255;
+
+  --ion-color-medium: var(--app-text-muted);
+  --ion-color-medium-rgb: 144, 154, 176;
+  --ion-color-medium-contrast: #{$bg};
+  --ion-color-medium-contrast-rgb: 14, 18, 32;
+  --ion-color-medium-shade: #7f889b;
+  --ion-color-medium-tint: #9ba4b8;
+
+  // Los avisos (toasts) van en «dark»: claros sobre el fondo oscuro, como en iOS.
+  --ion-color-dark: #e3e8f0;
+  --ion-color-dark-rgb: 227, 232, 240;
+  --ion-color-dark-contrast: #161c2e;
+  --ion-color-dark-contrast-rgb: 22, 28, 46;
+  --ion-color-dark-shade: #c8ccd3;
+  --ion-color-dark-tint: #e6eaf1;
 }
