@@ -100,9 +100,9 @@
   </section>
 
   <section class="panel" aria-labelledby="backup-title">
-    <h2 class="panel-title" id="backup-title">Copia de seguridad</h2>
-    <p class="panel-note">Tus temas y tu progreso solo se guardan en este dispositivo. Descarga una copia para no
-      perderlos o para pasarlos a otro.
+    <h2 class="panel-title" id="backup-title">Respaldo</h2>
+    <p class="panel-note">Tus temas y tu progreso solo se guardan en este dispositivo. Exporta un respaldo y guárdalo en
+      un chat (p. ej. envíatelo por WhatsApp) para no perderlos o para pasarlos a otro.
       <ng-container *ngIf="persistence === 'persisted'">El navegador no los borrará aunque le falte espacio.</ng-container>
       <ng-container *ngIf="persistence === 'best-effort'">Si le falta espacio, el navegador podría borrarlos: instalar
         la app ayuda a evitarlo.</ng-container>
@@ -110,18 +110,35 @@
     <p class="backup-summary" *ngIf="summary">
       Ahora tienes {{ count(summary.topics, 'tema', 'temas') }} y {{ count(summary.words, 'palabra', 'palabras') }}.
     </p>
-    <div class="backup-actions">
-      <ion-button expand="block" [disabled]="downloading || restoring" (click)="downloadBackup()">
-        <ion-icon slot="start" name="download-outline" aria-hidden="true"></ion-icon>
-        Descargar copia
+    <div class="panel-actions">
+      <!-- Sin mensaje ni fallo: se está preparando por primera vez. -->
+      <ion-button [disabled]="restoring || resetting || (!backupMessage && !backupFailed)" (click)="exportBackup()">
+        <ion-icon slot="start" name="share-outline" aria-hidden="true"></ion-icon>
+        Exportar
       </ion-button>
-      <ion-button expand="block" fill="outline" [disabled]="downloading || restoring" (click)="chooseBackupFile()">
+      <ion-button fill="outline" [disabled]="restoring || resetting" (click)="importBackup()">
         <ion-spinner *ngIf="restoring" name="crescent"></ion-spinner>
-        <ion-icon *ngIf="!restoring" slot="start" name="cloud-upload-outline" aria-hidden="true"></ion-icon>
-        {{ restoring ? ' Restaurando...' : 'Restaurar copia' }}
+        <ion-icon *ngIf="!restoring" slot="start" name="clipboard-outline" aria-hidden="true"></ion-icon>
+        {{ restoring ? ' Importando...' : 'Importar' }}
       </ion-button>
     </div>
-    <input #backupFile type="file" accept="application/json,.json" hidden (change)="restoreBackup($event)" />
+  </section>
+
+  <section class="panel" aria-labelledby="reset-title">
+    <h2 class="panel-title" id="reset-title">Empezar de cero</h2>
+    <p class="panel-note">«Reiniciar» conserva tus temas y palabras, pero vuelven a salir como nuevas y se borran tu
+      racha y tus estadísticas. «Borrar todo» deja la app como recién instalada. No se puede deshacer: exporta antes un
+      respaldo si quieres poder volver atrás.</p>
+    <div class="panel-actions">
+      <ion-button fill="outline" color="danger" [disabled]="restoring || resetting" (click)="resetProgress()">
+        <ion-icon slot="start" name="refresh-outline" aria-hidden="true"></ion-icon>
+        Reiniciar
+      </ion-button>
+      <ion-button fill="outline" color="danger" [disabled]="restoring || resetting" (click)="eraseAll()">
+        <ion-icon slot="start" name="trash-outline" aria-hidden="true"></ion-icon>
+        Borrar todo
+      </ion-button>
+    </div>
   </section>
 
 </ion-content>

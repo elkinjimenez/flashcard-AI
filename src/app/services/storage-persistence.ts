@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { first } from 'rxjs';
 import { FlashcardService } from './flashcard';
+import { hasOwnStudySets } from './starter-topics';
 import { StudySetRepository } from './study-set-repository';
 
 // 'persisted': el navegador no borrará los datos aunque le falte espacio. 'best-effort': podría borrarlos.
@@ -15,12 +16,12 @@ export class StoragePersistenceService {
   private studySets = inject(StudySetRepository);
   private flashcards = inject(FlashcardService);
 
-  // Al abrir la app si ya hay temas y, si no, tras la primera práctica: sin nada guardado, el aviso de Firefox no se
-  // entendería. En cada arranque, porque Chrome puede concederlo más adelante (p. ej. al instalar la app); si ya está
-  // concedido no se pide otra vez.
+  // Al abrir la app si ya hay temas suyos y, si no, tras la primera práctica: sin nada suyo guardado (solo los temas de
+  // inicio, ver hasOwnStudySets), el aviso de Firefox no se entendería. En cada arranque, porque Chrome puede concederlo
+  // más adelante (p. ej. al instalar la app); si ya está concedido no se pide otra vez.
   init() {
     this.studySets.getAll()
-      .then(studySets => studySets.length ? this.request() : false)
+      .then(studySets => hasOwnStudySets(studySets) ? this.request() : false)
       .catch(error => console.warn('No se pudo comprobar si hay temas guardados', error));
     this.flashcards.cardsChanged.pipe(first()).subscribe(() => this.request());
   }

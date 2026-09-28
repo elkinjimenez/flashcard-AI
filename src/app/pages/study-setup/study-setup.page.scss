@@ -87,17 +87,14 @@ ion-content {
     transform: scale(0.96);
   }
 
-  // Como el de los repasos de Hoy.
+  // Sin recuadro: el icono solo, algo más grande.
   .topic-icon {
     display: grid;
     place-items: center;
-    width: 44px;
     height: 44px;
-    border-radius: 14px;
-    background: var(--app-primary-soft);
     color: var(--ion-color-primary);
-    font-size: 1.35rem;
-    transition: background 0.15s ease, color 0.15s ease;
+    font-size: 1.9rem;
+    transition: color 0.15s ease;
   }
 
   .topic-label {
@@ -160,7 +157,7 @@ ion-content {
     box-shadow: var(--app-shadow-primary);
 
     .topic-icon {
-      background: var(--ion-color-primary-contrast);
+      color: var(--ion-color-primary-contrast);
     }
 
     .topic-label {
@@ -172,15 +169,16 @@ ion-content {
       color: rgba(var(--ion-color-primary-contrast-rgb), 0.85);
     }
 
+    // Tres tonos bien separados: sobre el azul, el tramo de las que está aprendiendo apenas se distinguía del fondo.
     .topic-progress-bar {
-      background: rgba(var(--ion-color-primary-contrast-rgb), 0.3);
+      background: rgba(var(--ion-color-primary-contrast-rgb), 0.2);
 
       span {
         background: var(--ion-color-primary-contrast);
       }
 
       .learning {
-        background: rgba(var(--ion-color-primary-contrast-rgb), 0.55);
+        background: rgba(var(--ion-color-primary-contrast-rgb), 0.6);
       }
     }
   }

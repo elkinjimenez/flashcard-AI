@@ -72,6 +72,11 @@ export interface DeletedWord {
 // verdad la sabe, en dos repasos más queda aprendida; si no, el primer fallo la baja de caja como a cualquiera.
 const knownBox = 4;
 
+// Mantiene la palabra, su imagen, ejemplo, confundibles, truco y búsqueda, pero vuelve a ser nueva.
+function resetCard({ word, translation, imageUrl, example, confusables, mnemonic, imageQuery }: Flashcard): Flashcard {
+  return { word, translation, imageUrl, example, confusables, mnemonic, imageQuery };
+}
+
 @Injectable({ providedIn: 'root' })
 export class FlashcardService {
   private gemini = inject(GeminiService);
@@ -388,12 +393,14 @@ export class FlashcardService {
     }
   }
 
-  // Mantiene las palabras, imágenes, ejemplos, confundibles, trucos y búsquedas, pero todas vuelven a ser nuevas.
   async resetTopic(topic: string): Promise<void> {
-    await this.studySets.updateCards(topic, cards => cards.map(
-      ({ word, translation, imageUrl, example, confusables, mnemonic, imageQuery }) =>
-        ({ word, translation, imageUrl, example, confusables, mnemonic, imageQuery })
-    ));
+    await this.studySets.updateCards(topic, cards => cards.map(resetCard));
+  }
+
+  // Todos los temas a la vez, y sin actividad: se van también la racha y las estadísticas.
+  async resetAllProgress(): Promise<void> {
+    const studySets = await this.studySets.getAll();
+    await this.studySets.replaceAll(studySets.map(studySet => ({ ...studySet, cards: studySet.cards.map(resetCard) })), []);
   }
 
   // Indexado por la clave del tema (toTopicKey).

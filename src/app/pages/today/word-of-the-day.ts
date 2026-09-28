@@ -27,6 +27,15 @@ export function pickWordOfTheDay(hardWords: DailyWord[], now = new Date()): Dail
   return { word, translation };
 }
 
+// Al reiniciar el progreso: la de hoy ya no le cuesta.
+export function forgetWordOfTheDay() {
+  try {
+    localStorage.removeItem(storageKey);
+  } catch {
+    // Sin almacenamiento no hay nada guardado.
+  }
+}
+
 function loadStoredWord(): StoredWord | null {
   try {
     const stored = JSON.parse(localStorage.getItem(storageKey) ?? 'null');

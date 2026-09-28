@@ -26,7 +26,8 @@ export class HomePage {
     addIcons({ arrowForwardOutline, sparklesOutline });
   }
 
-  // A Temas: sin palabras aún, en Hoy no habría nada. replaceUrl: con el botón atrás de Android no se vuelve a la bienvenida.
+  // A Temas: al empezar solo tiene palabras nuevas (las de los temas de inicio) y en Hoy solo salen los repasos.
+  // replaceUrl: con el botón atrás de Android no se vuelve a la bienvenida.
   start() {
     markWelcomeSeen();
     this.router.navigate(['/tabs/topics'], { replaceUrl: true });

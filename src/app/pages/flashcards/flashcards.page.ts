@@ -8,7 +8,7 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
-  volumeHighOutline, arrowBackOutline, imageOutline, imagesOutline, eyeOutline, eyeOffOutline, bulbOutline
+  volumeHighOutline, closeOutline, imageOutline, imagesOutline, eyeOutline, eyeOffOutline, bulbOutline
 } from 'ionicons/icons';
 import { AnswerRecord, Flashcard, FlashcardService } from 'src/app/services/flashcard';
 import { mnemonicMisses } from 'src/app/services/flashcard.model';
@@ -144,7 +144,7 @@ export class FlashcardsPage {
   @ViewChild(WriteCardComponent) private writeCard?: WriteCardComponent;
 
   constructor() {
-    addIcons({ volumeHighOutline, arrowBackOutline, imageOutline, imagesOutline, eyeOutline, eyeOffOutline, bulbOutline });
+    addIcons({ volumeHighOutline, closeOutline, imageOutline, imagesOutline, eyeOutline, eyeOffOutline, bulbOutline });
     this.flashcardService.imageDropped.pipe(takeUntilDestroyed()).subscribe(imageUrl => this.onImageDropped(imageUrl));
   }
 
@@ -670,6 +670,18 @@ export class FlashcardsPage {
   // Al salir de cualquier forma (también con el botón atrás de Android), cuando terminen de guardarse las respuestas.
   ionViewWillLeave() {
     this.saveQueue.then(() => this.flashcardService.cardsChanged.next());
+  }
+
+  // Salir a mitad de sesión no cuesta nada: se avisa de que lo respondido quedó guardado. Tras la transición, para no
+  // avisar si se cancela el gesto de volver.
+  ionViewDidLeave() {
+    const answered = this.summary ? 0 : this.session.answeredWords;
+    if (!answered) return;
+
+    const words = answered === 1 ? '1 palabra' : `${answered} palabras`;
+    const pending = this.completedWords < this.sessionWords ? ' Las demás te esperan en la próxima práctica.' : '';
+    this.saveQueue.then(() =>
+      this.toast.show(`Tu progreso en ${words} quedó guardado.${pending}`, { color: 'dark', duration: 4000 }));
   }
 
   next() {

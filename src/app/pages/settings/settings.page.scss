@@ -89,18 +89,21 @@ ion-content {
   font-weight: 700;
 }
 
-.backup-actions {
+// Los dos botones de cada panel, uno al lado del otro y del mismo ancho.
+.panel-actions {
   display: flex;
-  flex-direction: column;
   gap: 10px;
 
   ion-button {
+    flex: 1;
+    min-width: 0;
     --border-radius: 16px;
     min-height: 48px;
     margin: 0;
     font-weight: 700;
   }
 
+  // Con color (p. ej. los rojos de Empezar de cero), Ionic usa el suyo para el borde.
   ion-button[fill='outline'] {
     --border-color: var(--app-primary-outline);
     --border-width: 1.5px;

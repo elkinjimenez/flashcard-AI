@@ -105,6 +105,11 @@ export class StudySession {
     return { knew: results.length - hard, hard };
   }
 
+  // Las respondidas al menos una vez: su respuesta ya se guardó.
+  get answeredWords(): number {
+    return this.results.size;
+  }
+
   // Pasa a la siguiente; false si no quedan: la sesión terminó.
   next(): boolean {
     if (this.position >= this.cards.length - 1) return false;

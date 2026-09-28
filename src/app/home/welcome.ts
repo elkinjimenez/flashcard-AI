@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { StudySetRepository } from '../services/study-set-repository';
+import { hasOwnStudySets } from '../services/starter-topics';
 
 const storageKey = 'flashcards-ai.welcomed';
 
@@ -21,15 +22,15 @@ export function markWelcomeSeen() {
   }
 }
 
-// La bienvenida solo sale la primera vez: después la app abre directamente en Hoy. Quien ya tiene temas guardados
-// (de antes de existir la marca) tampoco la vuelve a ver.
+// La bienvenida solo sale la primera vez: después la app abre directamente en Hoy. Quien ya tiene temas suyos (de
+// antes de existir la marca) tampoco la vuelve a ver; los de inicio no cuentan (ver hasOwnStudySets).
 export const welcomeGuard: CanActivateFn = async () => {
   const router = inject(Router);
   const studySets = inject(StudySetRepository);
 
   if (!hasSeenWelcome()) {
     try {
-      if (!(await studySets.getAll()).length) return true;
+      if (!hasOwnStudySets(await studySets.getAll())) return true;
       markWelcomeSeen();
     } catch {
       return true;

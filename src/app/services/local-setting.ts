@@ -10,6 +10,15 @@ export function loadSetting(name: string): string | null {
   }
 }
 
+// Borra todo lo guardado con el prefijo (también la bienvenida y la palabra del día): todo vuelve a su valor por defecto.
+export function clearSettings() {
+  try {
+    Object.keys(localStorage).filter(key => key.startsWith(prefix)).forEach(key => localStorage.removeItem(key));
+  } catch {
+    // Sin almacenamiento no hay nada guardado.
+  }
+}
+
 // null lo borra: vuelve al valor por defecto.
 export function saveSetting(name: string, value: string | null) {
   try {

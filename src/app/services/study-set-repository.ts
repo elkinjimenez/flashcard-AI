@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { AppUpdateService } from './app-update';
 import { Flashcard, learnedBox, reviewIntervalDays } from './flashcard.model';
+import { starterTopics } from './starter-topics';
 import { toTopicKey } from './topic-key';
 
 // Con qué forma de buscar imágenes se creó el tema. Solo informativo: las imágenes guardadas no se vuelven a buscar
@@ -144,7 +145,7 @@ export class StudySetRepository {
     });
   }
 
-  // Restaurar una copia de seguridad: todo en una transacción, así si algo falla se queda lo que había.
+  // Restaurar una copia de seguridad o empezar de cero: todo en una transacción, así si algo falla se queda lo que había.
   replaceAll(studySets: StoredStudySet[], activity: DailyActivity[]): Promise<void> {
     return this.transaction([this.storeName, this.activityStoreName], 'readwrite', (transaction, resolve, reject) => {
       transaction.oncomplete = () => resolve();
@@ -164,6 +165,11 @@ export class StudySetRepository {
         transaction.abort();
       }
     });
+  }
+
+  // Como una base de datos recién creada: los temas de inicio y sin actividad.
+  eraseAll(): Promise<void> {
+    return this.replaceAll(this.createStarterSets(), []);
   }
 
   // Una transacción con la conexión compartida: `run` hace sus peticiones y resuelve o rechaza. Si la conexión ya no
@@ -217,7 +223,7 @@ export class StudySetRepository {
       request.onupgradeneeded = event => {
         const database = request.result;
         if (!database.objectStoreNames.contains(this.storeName)) {
-          database.createObjectStore(this.storeName, { keyPath: 'id' });
+          this.addStarterTopics(database.createObjectStore(this.storeName, { keyPath: 'id' }));
         } else if (event.oldVersion < 6 && request.transaction) {
           this.migrateStudySets(request.transaction, event.oldVersion);
         }
@@ -245,6 +251,23 @@ export class StudySetRepository {
         reject(request.error);
       };
     });
+  }
+
+  // Base de datos nueva (la primera vez que se abre la app, o tras borrar sus datos): empieza con los temas de inicio.
+  // Solo aquí y al borrar todo (ver eraseAll), para que no vuelvan si el usuario los borra.
+  private addStarterTopics(store: IDBObjectStore) {
+    this.createStarterSets().forEach(studySet => store.put(studySet));
+  }
+
+  private createStarterSets(): StoredStudySet[] {
+    const createdAt = new Date().toISOString();
+    return starterTopics.map(({ topic, words }) => ({
+      id: this.getStudySetId(topic),
+      topic,
+      cards: words.map(word => ({ ...word, imageUrl: '' })),
+      createdAt,
+      imageSearchVersion: currentImageSearchVersion
+    }));
   }
 
   // Reescribe los temas guardados con los cambios de cada versión desde `oldVersion`. En una sola lectura: otra en la
