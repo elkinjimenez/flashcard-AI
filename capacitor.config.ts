@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.elkinjimenez.flashcardsai',
-  appName: 'flashcards-ai',
+  appName: 'Flashcards AI',
   webDir: 'www'
 };
 
