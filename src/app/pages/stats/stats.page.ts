@@ -11,7 +11,8 @@ import {
   barbellOutline, bulbOutline, chevronForward, imageOutline, statsChartOutline, volumeHighOutline
 } from 'ionicons/icons';
 import { DailyActivity } from 'src/app/services/study-set-repository';
-import { HardWord, Stats, StatsService, TopicStats, WordStage } from 'src/app/services/stats';
+import { HardWord, Stats, StatsService, TopicStats, wordStages } from 'src/app/services/stats';
+import { count } from 'src/app/services/count';
 import { FlashcardService } from 'src/app/services/flashcard';
 import { DayChangeService } from 'src/app/services/day-change';
 import { mnemonicMisses } from 'src/app/services/flashcard.model';
@@ -24,14 +25,6 @@ import { CardImageDirective } from 'src/app/card-image.directive';
 
 const weekdayInitials = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 const weekdayNames = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-
-// En orden de avance: la barra de "Tus palabras" las apila así, de la más clara a la más oscura.
-const stages: { id: WordStage; label: string }[] = [
-  { id: 'new', label: 'Nuevas' },
-  { id: 'learning', label: 'Aprendiendo' },
-  { id: 'consolidating', label: 'Afianzadas' },
-  { id: 'learned', label: 'Aprendidas' },
-];
 
 const todayIndex = 6;
 
@@ -53,9 +46,11 @@ export class StatsPage {
   private toast = inject(ToastService);
   private pronunciation = inject(PronunciationService);
 
-  readonly stages = stages;
+  // En orden de avance: la barra de "Tus palabras" las apila así, de la más clara a la más oscura.
+  readonly stages = wordStages;
   readonly todayIndex = todayIndex;
   readonly mnemonicMisses = mnemonicMisses;
+  readonly count = count;
   stats: Stats | null = null;
   loading = true;
   loadingError = false;
@@ -157,7 +152,7 @@ export class StatsPage {
 
   get stagesDescription(): string {
     const stats = this.stats;
-    return stats ? stages.map(stage => `${stage.label}: ${stats.stages[stage.id]}`).join(', ') : '';
+    return stats ? wordStages.map(stage => `${stage.plural}: ${stats.stages[stage.id]}`).join(', ') : '';
   }
 
   // La más alta llega al 85 %: encima queda sitio para su número.
@@ -187,10 +182,6 @@ export class StatsPage {
   // Para abrir la lista de sus palabras.
   topicKey(topic: TopicStats): string {
     return toTopicKey(topic.topic);
-  }
-
-  count(value: number, singular: string, plural: string): string {
-    return `${value} ${value === 1 ? singular : plural}`;
   }
 
   private percent(value: number): string {

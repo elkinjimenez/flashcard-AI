@@ -8,7 +8,7 @@ import { wordPattern } from 'src/app/services/word-forms';
 import { CardImageDirective } from 'src/app/card-image.directive';
 
 // Presentación de una palabra nueva: imagen, palabra, pronunciación y ejemplo, sin preguntar nada.
-// Su primer ejercicio llega unas tarjetas después (ver planSession en la página).
+// Su primer ejercicio llega unas tarjetas después (ver StudySession.plan).
 @Component({
   selector: 'app-intro-card',
   standalone: true,

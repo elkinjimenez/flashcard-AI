@@ -3,8 +3,16 @@ import { Flashcard, isKnownCard, isNewCard, knownFromBox } from './flashcard.mod
 import { DailyActivity, StudySetRepository } from './study-set-repository';
 import { toDayKey } from './day-key';
 
-// En qué punto del aprendizaje está cada palabra (Leitner): de menos a más avanzada.
-export type WordStage = 'new' | 'learning' | 'consolidating' | 'learned';
+// En qué punto del aprendizaje está cada palabra (Leitner): de menos a más avanzada. Con su nombre para una palabra y
+// para varias.
+export const wordStages = [
+  { id: 'new', label: 'Nueva', plural: 'Nuevas' },
+  { id: 'learning', label: 'Aprendiendo', plural: 'Aprendiendo' },
+  { id: 'consolidating', label: 'Afianzada', plural: 'Afianzadas' },
+  { id: 'learned', label: 'Aprendida', plural: 'Aprendidas' },
+] as const;
+
+export type WordStage = typeof wordStages[number]['id'];
 
 export interface TopicStats {
   topic: string;
@@ -55,6 +63,11 @@ export function wordStage(card: Flashcard): WordStage {
   if (card.learned) return 'learned';
   if (isNewCard(card)) return 'new';
   return (card.box ?? 0) >= knownFromBox ? 'consolidating' : 'learning';
+}
+
+export function wordStageLabel(card: Flashcard): string {
+  const stage = wordStage(card);
+  return wordStages.find(option => option.id === stage)?.label ?? '';
 }
 
 @Injectable({ providedIn: 'root' })

@@ -17,6 +17,7 @@ import { describeRequestError } from 'src/app/services/request-error';
 import { ToastService } from 'src/app/services/toast';
 import { DailyWord, pickWordOfTheDay } from './word-of-the-day';
 import { PronunciationService } from 'src/app/services/pronunciation';
+import { count } from 'src/app/services/count';
 
 // Como mucho, los repasos de una sesión: igual que la sesión más larga que se puede elegir en Temas.
 const maxReviewSession = 20;
@@ -43,6 +44,7 @@ export class TodayPage {
   private toast = inject(ToastService);
   private pronunciation = inject(PronunciationService);
 
+  readonly count = count;
   // Sale de las palabras que más le cuestan; sin ninguna, no se muestra.
   wordOfTheDay: DailyWord | null = null;
   // Se actualiza en cada carga: la app puede seguir abierta al día siguiente.
@@ -145,10 +147,6 @@ export class TodayPage {
 
   icon(topic: TopicStats): string {
     return topicIcon(topic.topic);
-  }
-
-  count(value: number, singular: string, plural: string): string {
-    return `${value} ${value === 1 ? singular : plural}`;
   }
 
   // Sesión con los repasos que tocan del tema (van antes que las palabras nuevas, ver prepareSession).

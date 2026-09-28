@@ -24,6 +24,7 @@ import { FlashcardService } from 'src/app/services/flashcard';
 import { StoragePersistence, StoragePersistenceService } from 'src/app/services/storage-persistence';
 import { ToastService } from 'src/app/services/toast';
 import { AnswerFeedbackService } from 'src/app/services/answer-feedback';
+import { count } from 'src/app/services/count';
 
 interface VoiceOption {
   id: string;
@@ -79,6 +80,7 @@ export class SettingsPage {
   readonly automaticVoice = automaticVoice;
   readonly canSpeak = this.pronunciation.available;
   readonly canVibrate = this.feedback.canVibrate;
+  readonly count = count;
 
   level: EnglishLevel = loadEnglishLevel();
   dailyGoal: DailyGoal = loadDailyGoal();
@@ -169,10 +171,6 @@ export class SettingsPage {
   setTheme(mode: ThemeMode) {
     this.themeMode = mode;
     this.theme.setMode(mode);
-  }
-
-  count(value: number, singular: string, plural: string): string {
-    return `${value} ${value === 1 ? singular : plural}`;
   }
 
   async downloadBackup() {

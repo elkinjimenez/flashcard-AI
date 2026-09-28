@@ -6,7 +6,7 @@ import {
   arrowUndoOutline, arrowUp, bookOutline, checkmark, flame, imageOutline, star, timeOutline
 } from 'ionicons/icons';
 import { Flashcard, learnedBox } from 'src/app/services/flashcard.model';
-import { Streak, WordStage, wordStage } from 'src/app/services/stats';
+import { Streak, wordStageLabel } from 'src/app/services/stats';
 import { MiniStory } from 'src/app/services/gemini';
 import { MiniStoryComponent } from '../mini-story/mini-story.component';
 import { CardImageDirective } from 'src/app/card-image.directive';
@@ -50,13 +50,6 @@ interface WordRow {
   status: string;
   returns: string;
 }
-
-const stageLabels: Record<WordStage, string> = {
-  new: 'Nueva',
-  learning: 'Aprendiendo',
-  consolidating: 'Afianzada',
-  learned: 'Aprendida',
-};
 
 // Palabras que se piden para la historia, primero las difíciles (las que más la necesitan): con muchas más saldría
 // forzada o demasiado larga.
@@ -142,14 +135,13 @@ export class SessionSummaryComponent implements OnInit, OnChanges {
     const outcome: Outcome = hard
       ? 'hard'
       : card.learned && !before.learned ? 'learned' : level > levelBefore ? 'up' : 'same';
-    const stage = stageLabels[wordStage(card)];
 
     return {
       card,
       outcome,
       level,
       levelBefore,
-      status: outcome === 'hard' ? 'A reforzar' : outcome === 'learned' ? '¡Aprendida!' : stage,
+      status: outcome === 'hard' ? 'A reforzar' : outcome === 'learned' ? '¡Aprendida!' : wordStageLabel(card),
       returns: this.describeReturn(card.nextReview, now)
     };
   }

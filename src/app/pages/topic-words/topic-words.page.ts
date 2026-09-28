@@ -9,17 +9,10 @@ import {
 import { addIcons } from 'ionicons';
 import { arrowBackOutline, ellipsisHorizontal, imageOutline } from 'ionicons/icons';
 import { Flashcard, FlashcardService } from 'src/app/services/flashcard';
-import { WordStage, wordStage } from 'src/app/services/stats';
+import { WordStage, wordStage, wordStageLabel } from 'src/app/services/stats';
 import { normalizeAnswer } from 'src/app/services/word-forms';
 import { ToastService } from 'src/app/services/toast';
 import { CardImageDirective } from 'src/app/card-image.directive';
-
-const stageLabels: Record<WordStage, string> = {
-  new: 'Nueva',
-  learning: 'Aprendiendo',
-  consolidating: 'Afianzada',
-  learned: 'Aprendida',
-};
 
 // Desde cuántas palabras aparece el buscador.
 const searchFrom = 8;
@@ -99,7 +92,7 @@ export class TopicWordsPage {
   }
 
   stageLabel(card: Flashcard): string {
-    return stageLabels[wordStage(card)];
+    return wordStageLabel(card);
   }
 
   // Tras releer la lista las tarjetas son otros objetos: así no se vuelven a cargar sus imágenes.

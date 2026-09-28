@@ -76,7 +76,7 @@
         <ul class="legend">
           <li *ngFor="let stage of stages">
             <span class="swatch" [attr.data-stage]="stage.id" aria-hidden="true"></span>
-            <span class="legend-label">{{ stage.label }}</span>
+            <span class="legend-label">{{ stage.plural }}</span>
             <span class="legend-value">{{ s.stages[stage.id] }}</span>
           </li>
         </ul>
