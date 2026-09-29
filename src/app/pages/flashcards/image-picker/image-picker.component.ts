@@ -2,22 +2,21 @@ import { Component, Input, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
-  IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonSearchbar, IonSpinner, IonIcon,
-  ModalController
+  IonHeader, IonToolbar, IonContent, IonFooter, IonSearchbar, IonSpinner, IonIcon, ModalController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { checkmarkCircle } from 'ionicons/icons';
+import { checkmarkCircle, imageOutline } from 'ionicons/icons';
 import { Flashcard } from 'src/app/services/flashcard';
 import { ImageCandidate, KlipyService } from 'src/app/services/klipy';
 
 // Elegir a mano la imagen de una tarjeta. Empieza con los mismos candidatos que al crearla; si ninguno sirve, se
-// busca con otras palabras. Se abre con ModalController: devuelve la URL elegida con el rol 'confirm'.
+// busca con otras palabras. Se abre con CardModalService: devuelve la URL elegida al guardar.
 @Component({
   selector: 'app-image-picker',
   standalone: true,
   imports: [
     CommonModule, FormsModule,
-    IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonSearchbar, IonSpinner, IonIcon
+    IonHeader, IonToolbar, IonContent, IonFooter, IonSearchbar, IonSpinner, IonIcon
   ],
   templateUrl: './image-picker.component.html',
   styleUrls: ['./image-picker.component.scss'],
@@ -30,13 +29,15 @@ export class ImagePickerComponent implements OnInit {
 
   query = '';
   candidates: ImageCandidate[] = [];
+  // La marcada en la cuadrícula; al abrir, la actual.
+  selectedUrl = '';
   loading = true;
   // Lo último que se buscó a mano, para el mensaje cuando no hay resultados.
   private searchedTerm = '';
   private searchId = 0;
 
   constructor() {
-    addIcons({ checkmarkCircle });
+    addIcons({ checkmarkCircle, imageOutline });
   }
 
   // Ejemplo de búsqueda con la de la IA: Klipy funciona mejor con 2 o 3 palabras en inglés.
@@ -51,7 +52,13 @@ export class ImagePickerComponent implements OnInit {
       : 'No se encontraron imágenes. Prueba a buscar con otras palabras.';
   }
 
+  // Solo si cambia: guardar la misma no hace nada.
+  get canSave(): boolean {
+    return !!this.selectedUrl && this.selectedUrl !== this.card.imageUrl;
+  }
+
   ngOnInit() {
+    this.selectedUrl = this.card.imageUrl;
     return this.show(this.klipy.searchCandidates([this.card]).then(([candidates]) => candidates));
   }
 
@@ -67,8 +74,8 @@ export class ImagePickerComponent implements OnInit {
     return candidate.url === this.card.imageUrl;
   }
 
-  choose(candidate: ImageCandidate) {
-    this.modalController.dismiss(candidate.url, 'confirm');
+  save() {
+    this.modalController.dismiss(this.selectedUrl, 'confirm');
   }
 
   cancel() {

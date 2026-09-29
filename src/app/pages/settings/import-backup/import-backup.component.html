@@ -1,0 +1,28 @@
+<ion-header class="card-modal-header ion-no-border">
+  <span class="card-modal-handle" aria-hidden="true"></span>
+  <ion-toolbar>
+    <h2 class="card-modal-title">
+      <ion-icon name="clipboard-outline" aria-hidden="true"></ion-icon>
+      <span>Importar respaldo</span>
+    </h2>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="card-modal-form">
+    <label class="card-modal-field">
+      <span class="card-modal-label">Respaldo</span>
+      <!-- Sin corrector: se pone lento con textos largos. -->
+      <textarea #input class="card-modal-input" [(ngModel)]="text" placeholder="Pega aquí el respaldo" spellcheck="false"
+        autocapitalize="off" autocorrect="off"></textarea>
+    </label>
+    <p class="card-modal-note">Pega el mensaje completo que exportaste desde la app.</p>
+  </div>
+</ion-content>
+
+<ion-footer class="card-modal-footer ion-no-border">
+  <button type="button" class="card-modal-btn card-modal-btn-cancel" (click)="cancel()">Cancelar</button>
+  <button type="button" class="card-modal-btn card-modal-btn-save" [disabled]="!canImport" (click)="import()">
+    Importar
+  </button>
+</ion-footer>

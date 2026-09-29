@@ -1,21 +1,22 @@
 import { Component, Input, OnDestroy, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
-  IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonSpinner, IonIcon, ModalController
+  IonHeader, IonToolbar, IonButton, IonContent, IonFooter, IonSpinner, IonIcon, ModalController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { eyeOffOutline, eyeOutline, stopCircleOutline, volumeHighOutline } from 'ionicons/icons';
+import { bookOutline, eyeOffOutline, eyeOutline, stopCircleOutline, volumeHighOutline } from 'ionicons/icons';
 import { GeminiService, MiniStory } from 'src/app/services/gemini';
 import { loadEnglishLevel } from 'src/app/services/english-level';
 import { PronunciationService } from 'src/app/services/pronunciation';
 import { describeRequestError } from 'src/app/services/request-error';
 
-// Historia corta con las palabras de la sesión, para verlas en contexto al terminar. Se abre con ModalController; al
-// cerrarse devuelve la historia, para no volver a pedirla si se abre otra vez (se pasa en `story`).
+// Historia corta con las palabras de la sesión, para verlas en contexto al terminar. Se abre con CardModalService. La
+// historia escrita se avisa con `storyReady` (se cierre como se cierre), para no volver a pedirla si se abre otra vez
+// (se pasa en `story`).
 @Component({
   selector: 'app-mini-story',
   standalone: true,
-  imports: [CommonModule, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonSpinner, IonIcon],
+  imports: [CommonModule, IonHeader, IonToolbar, IonButton, IonContent, IonFooter, IonSpinner, IonIcon],
   templateUrl: './mini-story.component.html',
   styleUrls: ['./mini-story.component.scss'],
 })
@@ -27,6 +28,7 @@ export class MiniStoryComponent implements OnInit, OnDestroy {
   @Input({ required: true }) topic!: string;
   @Input({ required: true }) words!: string[];
   @Input() story: MiniStory | null = null;
+  @Input() storyReady?: (story: MiniStory) => void;
 
   // Sin síntesis de voz no se ofrece escucharla.
   readonly canListen = 'speechSynthesis' in window;
@@ -41,7 +43,7 @@ export class MiniStoryComponent implements OnInit, OnDestroy {
   private reading = 0;
 
   constructor() {
-    addIcons({ eyeOffOutline, eyeOutline, stopCircleOutline, volumeHighOutline });
+    addIcons({ bookOutline, eyeOffOutline, eyeOutline, stopCircleOutline, volumeHighOutline });
   }
 
   ngOnInit() {
@@ -63,6 +65,7 @@ export class MiniStoryComponent implements OnInit, OnDestroy {
       const story = await this.gemini.writeStory(this.topic, this.words, loadEnglishLevel());
       if (story) {
         this.show(story);
+        this.storyReady?.(story);
       } else {
         this.error = 'La IA no pudo escribir la historia. Intenta nuevamente.';
       }
@@ -95,7 +98,7 @@ export class MiniStoryComponent implements OnInit, OnDestroy {
   }
 
   close() {
-    this.modalController.dismiss(this.story, 'close');
+    this.modalController.dismiss(null, 'cancel');
   }
 
   private stopReading() {

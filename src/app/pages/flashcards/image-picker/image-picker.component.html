@@ -1,9 +1,10 @@
-<ion-header>
+<ion-header class="card-modal-header ion-no-border">
+  <span class="card-modal-handle" aria-hidden="true"></span>
   <ion-toolbar>
-    <ion-title>Imagen de "{{ card.word }}"</ion-title>
-    <ion-buttons slot="end">
-      <ion-button (click)="cancel()">Cancelar</ion-button>
-    </ion-buttons>
+    <h2 class="card-modal-title">
+      <ion-icon name="image-outline" aria-hidden="true"></ion-icon>
+      <span>Imagen de "{{ card.word }}"</span>
+    </h2>
   </ion-toolbar>
   <ion-toolbar>
     <ion-searchbar [(ngModel)]="query" [placeholder]="placeholder" enterkeyhint="search"
@@ -23,8 +24,9 @@
 
   <div class="picker-grid" *ngIf="!loading && candidates.length">
     <button type="button" *ngFor="let candidate of candidates" class="picker-option"
-      [class.current]="isCurrent(candidate)" [attr.aria-current]="isCurrent(candidate) ? 'true' : null"
-      [attr.aria-label]="candidate.title || 'GIF'" (click)="choose(candidate)">
+      [class.selected]="candidate.url === selectedUrl" [attr.aria-pressed]="candidate.url === selectedUrl"
+      [attr.aria-current]="isCurrent(candidate) ? 'true' : null" [attr.aria-label]="candidate.title || 'GIF'"
+      (click)="selectedUrl = candidate.url">
       <!-- Sin crossorigin a propósito: son miniaturas de un solo uso y, como respuesta opaca, el service worker no
            las guarda ni ocupan sitio de las imágenes de las tarjetas. -->
       <img [src]="candidate.previewUrl" alt="" loading="lazy" draggable="false" />
@@ -35,3 +37,8 @@
     </button>
   </div>
 </ion-content>
+
+<ion-footer class="card-modal-footer ion-no-border">
+  <button type="button" class="card-modal-btn card-modal-btn-cancel" (click)="cancel()">Cancelar</button>
+  <button type="button" class="card-modal-btn card-modal-btn-save" [disabled]="!canSave" (click)="save()">Guardar</button>
+</ion-footer>

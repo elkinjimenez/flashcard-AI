@@ -38,12 +38,6 @@ ion-alert .alert-button-danger {
   color: var(--ion-color-danger);
 }
 
-/* Donde se pega el respaldo (ver SettingsPage): el mensaje es largo, que se vea una parte. */
-ion-alert.backup-alert textarea.alert-input {
-  min-height: 120px;
-  font-size: 0.8rem;
-}
-
 /* Barra de pestañas flotante (ver tabs.page.scss): medidas que comparte con el contenido que pasa por detrás. */
 :root {
   --glass-rgb: var(--app-surface-rgb);

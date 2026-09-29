@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, OnChanges, OnInit, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { IonButton, IonIcon, ModalController } from '@ionic/angular/standalone';
+import { IonButton, IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   arrowUndoOutline, arrowUp, bookOutline, checkmark, flame, imageOutline, star, timeOutline
@@ -11,6 +11,7 @@ import { MiniStory } from 'src/app/services/gemini';
 import { MiniStoryComponent } from '../mini-story/mini-story.component';
 import { CardImageDirective } from 'src/app/card-image.directive';
 import { AnswerFeedbackService } from 'src/app/services/answer-feedback';
+import { CardModalService } from 'src/app/services/card-modal';
 
 // Cómo le fue a una palabra en la sesión (o en la ronda de difíciles).
 export interface SummaryWord {
@@ -64,7 +65,7 @@ const dayMs = 24 * 60 * 60 * 1000;
   styleUrls: ['./session-summary.component.scss'],
 })
 export class SessionSummaryComponent implements OnInit, OnChanges {
-  private modalController = inject(ModalController);
+  private cardModal = inject(CardModalService);
   private feedback = inject(AnswerFeedbackService);
 
   @Input({ required: true }) summary!: SessionSummary;
@@ -116,13 +117,12 @@ export class SessionSummaryComponent implements OnInit, OnChanges {
 
   async openStory() {
     const words = [...this.rows].reverse().slice(0, maxStoryWords).map(row => row.card.word);
-    const modal = await this.modalController.create({
-      component: MiniStoryComponent,
-      componentProps: { topic: this.topic, words, story: this.story }
+    await this.cardModal.open(MiniStoryComponent, {
+      topic: this.topic,
+      words,
+      story: this.story,
+      storyReady: (story: MiniStory) => { this.story = story; }
     });
-    await modal.present();
-    const { data } = await modal.onWillDismiss<MiniStory | null>();
-    this.story = data ?? this.story;
   }
 
   levelLabel(row: WordRow): string {

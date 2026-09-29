@@ -1,6 +1,7 @@
 <ion-header class="ion-no-border">
   <ion-toolbar>
-    <ion-buttons slot="start">
+    <!-- En el resumen sobra: ya tiene "Terminar". Se oculta sin quitarlo para que el título no se mueva. -->
+    <ion-buttons slot="start" [style.visibility]="summary ? 'hidden' : null">
       <ion-button fill="clear" class="toolbar-button" (click)="exitStudy()" aria-label="Salir de la práctica"
         title="Salir de la práctica">
         <ion-icon slot="icon-only" name="close-outline"></ion-icon>

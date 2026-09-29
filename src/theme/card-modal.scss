@@ -1,0 +1,211 @@
+// Modales en tarjeta (ver CardModalService): la tarjeta, su cabecera, el formulario y los botones de abajo. Mismo aspecto
+// en iOS y Android: la app va en modo iOS (main.ts).
+//
+// <ion-header class="card-modal-header ion-no-border">
+//   <span class="card-modal-handle" aria-hidden="true"></span>
+//   <ion-toolbar>
+//     <h2 class="card-modal-title"><ion-icon name="..." aria-hidden="true"></ion-icon><span>Título</span></h2>
+//   </ion-toolbar>
+// </ion-header>
+// <ion-content>
+//   <div class="card-modal-form">
+//     <label class="card-modal-field"><span class="card-modal-label">Campo</span><input class="card-modal-input" /></label>
+//   </div>
+// </ion-content>
+// <ion-footer class="card-modal-footer ion-no-border">
+//   <button type="button" class="card-modal-btn card-modal-btn-cancel">Cancelar</button>
+//   <button type="button" class="card-modal-btn card-modal-btn-save">Guardar</button>
+// </ion-footer>
+
+// Ionic pinta de negro el body detrás de la pantalla encogida: que se vea el fondo de la app, como si la página solo se
+// hiciera más pequeña. La pantalla encogida no lleva velo oscuro: solo el contrast() que le pone Ionic.
+ion-app {
+  background: var(--app-bg);
+}
+
+ion-router-outlet {
+  background: transparent;
+}
+
+// ---- La tarjeta ----
+
+ion-modal.card-modal {
+  --background: var(--app-bg);
+
+  // Invisible, pero tocarlo (la franja de arriba) cierra el modal: en el móvil Ionic lo deja sin toque.
+  &::part(backdrop) {
+    opacity: 0;
+    pointer-events: auto;
+  }
+
+  ion-content {
+    --background: var(--app-bg);
+  }
+}
+
+// ---- Cabecera ----
+
+.card-modal-header ion-toolbar {
+  --background: var(--app-surface);
+  --border-width: 0;
+  --padding-start: 16px;
+  --padding-end: 16px;
+
+  &:first-of-type {
+    --min-height: 64px;
+  }
+}
+
+// La pestaña para arrastrar: solo se ve, el gesto es de toda la tarjeta.
+.card-modal-handle {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  // Por encima de ion-toolbar (10).
+  z-index: 11;
+  width: 36px;
+  height: 5px;
+  border-radius: 8px;
+  background: var(--app-grabber);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.card-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  color: var(--app-text);
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+
+  ion-icon {
+    flex-shrink: 0;
+    color: var(--ion-color-primary);
+    font-size: 1.2rem;
+  }
+
+  span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+// ---- Contenido ----
+
+.card-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 20px 16px;
+}
+
+.card-modal-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card-modal-label {
+  color: var(--app-text-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+// Ayuda bajo un campo.
+.card-modal-note {
+  margin: 0;
+  color: var(--app-text-muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.card-modal-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: 12px;
+  outline: none;
+  background: var(--app-surface);
+  color: var(--app-text);
+  // 16px: así iOS no acerca la pantalla al escribir.
+  font: inherit;
+  font-size: 1rem;
+  transition: border-color 0.15s ease;
+
+  &::placeholder {
+    color: var(--app-text-faint);
+  }
+
+  &:focus {
+    border-color: var(--app-primary-outline);
+  }
+}
+
+textarea.card-modal-input {
+  display: block;
+  min-height: 160px;
+  padding: 12px 14px;
+  resize: none;
+  line-height: 1.45;
+}
+
+// ---- Botones de abajo ----
+
+.card-modal-footer {
+  display: flex;
+  gap: 12px;
+  padding: 16px 16px max(32px, calc(var(--ion-safe-area-bottom, 0px) + 16px));
+  background: var(--app-bg);
+}
+
+.card-modal-btn {
+  // A partes iguales: con dos, la mitad cada uno.
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 18px;
+  border: 0;
+  border-radius: 14px;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  &:not(:disabled):active {
+    transform: scale(0.97);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ion-color-primary);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+}
+
+.card-modal-btn-cancel {
+  background: var(--app-fill);
+  color: var(--app-text-body);
+}
+
+.card-modal-btn-save {
+  background: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+
+  &:disabled {
+    background: var(--app-blue-300);
+    opacity: 0.6;
+  }
+}

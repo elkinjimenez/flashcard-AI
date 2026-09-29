@@ -20,7 +20,7 @@ import {
 } from 'src/app/services/new-words-limit';
 import { PronunciationService, SpeechRate, speechRates, voiceLanguage } from 'src/app/services/pronunciation';
 import { ThemeMode, ThemeService, themeModes } from 'src/app/services/theme';
-import { Backup, BackupError, BackupService, BackupSummary } from 'src/app/services/backup';
+import { Backup, BackupService, BackupSummary } from 'src/app/services/backup';
 import { FlashcardService } from 'src/app/services/flashcard';
 import { StudySetRepository } from 'src/app/services/study-set-repository';
 import { clearSettings } from 'src/app/services/local-setting';
@@ -30,6 +30,8 @@ import { ToastService } from 'src/app/services/toast';
 import { copyText, sendToWhatsApp, shareText } from 'src/app/services/share-text';
 import { AnswerFeedbackService } from 'src/app/services/answer-feedback';
 import { count } from 'src/app/services/count';
+import { CardModalService } from 'src/app/services/card-modal';
+import { ImportBackupComponent } from './import-backup/import-backup.component';
 
 interface VoiceOption {
   id: string;
@@ -78,6 +80,7 @@ export class SettingsPage {
   private feedback = inject(AnswerFeedbackService);
   private alertController = inject(AlertController);
   private actionSheetController = inject(ActionSheetController);
+  private cardModal = inject(CardModalService);
   private toast = inject(ToastService);
 
   readonly levels = englishLevels;
@@ -219,7 +222,7 @@ export class SettingsPage {
   async importBackup() {
     if (this.restoring) return;
 
-    const backup = await this.askBackup();
+    const backup = await this.cardModal.open<Backup>(ImportBackupComponent);
     if (!backup || !await this.confirmRestore(backup)) return;
 
     this.restoring = true;
@@ -311,43 +314,6 @@ export class SettingsPage {
 
   private showBackupCopied() {
     this.toast.show('Respaldo copiado. Pégalo en un chat o en tus notas para guardarlo.');
-  }
-
-  // Si el texto no sirve, el diálogo sigue abierto para corregirlo sin volver a pegarlo.
-  private async askBackup(): Promise<Backup | null> {
-    let backup: Backup | null = null;
-    const alert = await this.alertController.create({
-      header: 'Importar respaldo',
-      message: 'Pega el mensaje completo que exportaste desde la app.',
-      cssClass: 'backup-alert',
-      inputs: [{
-        name: 'text',
-        type: 'textarea',
-        placeholder: 'Pega aquí el respaldo',
-        // El corrector se pone lento con textos largos.
-        attributes: { spellcheck: false, autocapitalize: 'off', autocorrect: 'off' }
-      }],
-      buttons: [
-        { text: 'Cancelar', role: 'cancel' },
-        {
-          text: 'Importar',
-          handler: async ({ text }: { text: string }) => {
-            try {
-              backup = await this.backup.parse(text);
-              return true;
-            } catch (error) {
-              console.error('No se pudo leer el respaldo', error);
-              const message = error instanceof BackupError ? error.message : 'No se pudo leer el respaldo.';
-              this.toast.show(message, { color: 'danger', duration: 5000 });
-              return false;
-            }
-          }
-        }
-      ]
-    });
-    await alert.present();
-    await alert.onDidDismiss();
-    return backup;
   }
 
   private confirmRestore(backup: Backup): Promise<boolean> {

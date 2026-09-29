@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButtons,
-  IonButton, IonIcon, IonProgressBar, IonSpinner, ModalController, NavController
+  IonButton, IonIcon, IonProgressBar, IonSpinner, NavController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -26,6 +26,7 @@ import { ToastService } from 'src/app/services/toast';
 import { PronunciationService } from 'src/app/services/pronunciation';
 import { AnswerFeedbackService } from 'src/app/services/answer-feedback';
 import { StatsService, Streak } from 'src/app/services/stats';
+import { CardModalService } from 'src/app/services/card-modal';
 import { CardImageDirective } from 'src/app/card-image.directive';
 
 // Los que se sortean. speak: ver la imagen y decir la palabra en voz alta. write: verla y escribirla.
@@ -75,7 +76,7 @@ export class FlashcardsPage {
   private flashcardService = inject(FlashcardService);
   private toast = inject(ToastService);
   private speech = inject(SpeechRecognitionService);
-  private modalController = inject(ModalController);
+  private cardModal = inject(CardModalService);
   private navController = inject(NavController);
   private pronunciation = inject(PronunciationService);
   private statsService = inject(StatsService);
@@ -473,10 +474,8 @@ export class FlashcardsPage {
     this.clearQuizTimer();
     this.autoAdvanceMs = 0;
 
-    const modal = await this.modalController.create({ component: ImagePickerComponent, componentProps: { card } });
-    await modal.present();
-    const { data: imageUrl, role } = await modal.onWillDismiss<string>();
-    if (role !== 'confirm' || !imageUrl || imageUrl === card.imageUrl) return;
+    const imageUrl = await this.cardModal.open<string>(ImagePickerComponent, { card });
+    if (!imageUrl || imageUrl === card.imageUrl) return;
 
     this.replaceImage(card.word, imageUrl);
     const topic = this.topicOf(card.word);

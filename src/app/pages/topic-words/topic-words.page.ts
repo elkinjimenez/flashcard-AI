@@ -3,7 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
-  ActionSheetController, AlertController, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonSearchbar,
+  ActionSheetController, IonButton, IonButtons, IonContent, IonHeader, IonIcon, IonSearchbar,
   IonSpinner, IonTitle, IonToolbar, NavController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -12,7 +12,9 @@ import { Flashcard, FlashcardService } from 'src/app/services/flashcard';
 import { WordStage, wordStage, wordStageLabel } from 'src/app/services/stats';
 import { normalizeAnswer } from 'src/app/services/word-forms';
 import { ToastService } from 'src/app/services/toast';
+import { CardModalService } from 'src/app/services/card-modal';
 import { CardImageDirective } from 'src/app/card-image.directive';
+import { EditTranslationComponent } from './edit-translation/edit-translation.component';
 
 // Desde cuántas palabras aparece el buscador.
 const searchFrom = 8;
@@ -39,7 +41,7 @@ export class TopicWordsPage {
   private navController = inject(NavController);
   private flashcardService = inject(FlashcardService);
   private actionSheetController = inject(ActionSheetController);
-  private alertController = inject(AlertController);
+  private cardModal = inject(CardModalService);
   private toast = inject(ToastService);
 
   readonly searchFrom = searchFrom;
@@ -127,27 +129,11 @@ export class TopicWordsPage {
   }
 
   private async editTranslation(card: Flashcard) {
-    const alert = await this.alertController.create({
-      header: card.word,
-      subHeader: 'Traducción al español',
-      inputs: [{
-        name: 'translation',
-        type: 'text',
-        value: card.translation,
-        placeholder: 'Traducción',
-        attributes: { maxlength: 80, autocapitalize: 'off', enterkeyhint: 'done' }
-      }],
-      buttons: [
-        { text: 'Cancelar', role: 'cancel' },
-        // Vacía no se puede guardar: el diálogo sigue abierto.
-        { text: 'Guardar', role: 'confirm', handler: (values: { translation?: string }) => !!values.translation?.trim() }
-      ]
+    const translation = await this.cardModal.open<string>(EditTranslationComponent, {
+      word: card.word,
+      translation: card.translation
     });
-    await alert.present();
-    const { data, role } = await alert.onDidDismiss<{ values: { translation?: string } }>();
-
-    const translation = data?.values.translation?.trim();
-    if (role !== 'confirm' || !translation || translation === card.translation) return;
+    if (!translation || translation === card.translation) return;
 
     await this.change('No se pudo guardar la traducción.', () =>
       this.flashcardService.editTranslation(this.topic, card.word, translation));

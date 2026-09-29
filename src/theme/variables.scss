@@ -79,6 +79,9 @@
   --app-control-track: rgba(var(--app-ink-rgb), 0.08);
   --app-control-thumb: var(--app-surface);
 
+  // Pestaña para arrastrar de los modales (theme/card-modal.scss).
+  --app-grabber: rgba(var(--app-ink-rgb), 0.25);
+
   --app-shadow-card: 0 8px 20px rgba(var(--app-ink-rgb), 0.04);
   --app-shadow-control: 0 8px 20px rgba(var(--app-ink-rgb), 0.06);
   --app-shadow-tile: 0 10px 24px rgba(var(--app-ink-rgb), 0.1);
@@ -196,6 +199,8 @@
 
   --app-control-track: rgba(255, 255, 255, 0.07);
   --app-control-thumb: #343c56;
+
+  --app-grabber: rgba(255, 255, 255, 0.2);
 
   // ---- Ionic ----
   // Fondos y textos de sus componentes (alertas, hojas de acciones, selectores): cada paso mezcla el fondo con el texto.
