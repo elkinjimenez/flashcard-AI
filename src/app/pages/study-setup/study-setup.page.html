@@ -42,13 +42,12 @@
         <ion-icon aria-hidden="true" [name]="selectedTopic === topic.id ? 'checkmark' : topic.icon"></ion-icon>
       </span>
       <span class="topic-label">{{ topic.label }}</span>
-      <span class="topic-progress" *ngIf="topic.progress"
-        [attr.title]="'Ya sabes ' + topic.progress.known + ' de ' + topic.progress.total + ' palabras'">
+      <!-- El avance por pasos, que se mueve en cada repaso; el desglose va en el panel de abajo al elegir el tema. -->
+      <span class="topic-progress" *ngIf="topic.progress">
         <span class="topic-progress-bar">
-          <span [style.width.%]="progressPercent(topic.progress, topic.progress.known)"></span>
-          <span class="learning" [style.width.%]="progressPercent(topic.progress, topic.progress.learning)"></span>
+          <span [style.width.%]="topic.progress.percent"></span>
         </span>
-        {{ topic.progress.known }}/{{ topic.progress.total }}
+        {{ topic.progress.percent }} %
       </span>
       <ion-icon class="topic-origin" [name]="topic.fromLocal ? 'bookmark-outline' : 'sparkles-outline'"
         [attr.aria-label]="topic.fromLocal ? 'Tema guardado localmente' : 'Tema nuevo de la IA'"
@@ -64,6 +63,13 @@
   </ion-button>
 
   <div class="bottom-section">
+    <!-- Lo que hay detrás del porcentaje de la tarjeta: en el móvil no hay title que lo explique. -->
+    <p class="topic-breakdown" *ngIf="selectedSavedTopic?.progress as progress">
+      <strong>{{ progress.known }}</strong> {{ progress.known === 1 ? 'sabida' : 'sabidas' }} ·
+      <strong>{{ progress.learning }}</strong> aprendiendo ·
+      <strong>{{ progress.newWords }}</strong> sin empezar
+    </p>
+
     <div class="count-row">
       <h2 class="section-title" id="count-title">¿Cuántas palabras?</h2>
 

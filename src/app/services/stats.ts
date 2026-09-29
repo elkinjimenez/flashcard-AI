@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Flashcard, isKnownCard, isNewCard, knownFromBox } from './flashcard.model';
+import { Flashcard, isKnownCard, isNewCard, knownFromBox, reviewIntervalDays } from './flashcard.model';
 import { DailyActivity, StudySetRepository } from './study-set-repository';
 import { toDayKey } from './day-key';
 
@@ -36,6 +36,13 @@ export interface HardWord extends Pick<Flashcard, 'word' | 'translation' | 'imag
   topic: string;
 }
 
+// El primer día en que algunas de las que está aprendiendo pueden pasar a sabidas, si acierta sus repasos.
+export interface NextKnown {
+  // Comienzo de ese día (hora local).
+  date: Date;
+  words: number;
+}
+
 export interface Stats {
   totalWords: number;
   stages: Record<WordStage, number>;
@@ -53,6 +60,11 @@ export interface Stats {
   topics: TopicStats[];
   // Las más falladas que aún no se aprendieron.
   hardestWords: HardWord[];
+  // null si no está aprendiendo ninguna.
+  nextKnown: NextKnown | null;
+  // De dónde sale la palabra del día: las que más le cuestan; si aún no falló ninguna, las que está aprendiendo, y si
+  // tampoco, cualquiera de las suyas. Vacío sin palabras.
+  dailyWords: Pick<Flashcard, 'word' | 'translation'>[];
 }
 
 const dayMs = 24 * 60 * 60 * 1000;
@@ -98,6 +110,21 @@ export class StatsService {
     // También las aprendidas: tienen sus repasos de mantenimiento.
     const pending = cards.filter(({ card }) => card.nextReview);
 
+    const hardestWords = cards
+      .filter(({ card }) => !card.learned && (card.misses ?? 0) > 0)
+      .sort((a, b) => (b.card.misses ?? 0) - (a.card.misses ?? 0))
+      .slice(0, 5)
+      .map(({ card, topic }) => ({
+        word: card.word,
+        translation: card.translation,
+        imageUrl: card.imageUrl,
+        mnemonic: card.mnemonic,
+        misses: card.misses ?? 0,
+        topic
+      }));
+    const learning = cards.filter(({ card }) => wordStage(card) === 'learning');
+    const dailyWords = hardestWords.length ? hardestWords : (learning.length ? learning : cards).map(({ card }) => card);
+
     return {
       totalWords: cards.length,
       stages,
@@ -117,18 +144,9 @@ export class StatsService {
         }))
         .filter(topic => topic.total)
         .sort((a, b) => a.topic.localeCompare(b.topic, 'es')),
-      hardestWords: cards
-        .filter(({ card }) => !card.learned && (card.misses ?? 0) > 0)
-        .sort((a, b) => (b.card.misses ?? 0) - (a.card.misses ?? 0))
-        .slice(0, 5)
-        .map(({ card, topic }) => ({
-          word: card.word,
-          translation: card.translation,
-          imageUrl: card.imageUrl,
-          mnemonic: card.mnemonic,
-          misses: card.misses ?? 0,
-          topic
-        }))
+      hardestWords,
+      nextKnown: this.nextKnown(cards.map(({ card }) => card), now),
+      dailyWords: dailyWords.map(({ word, translation }) => ({ word, translation }))
     };
   }
 
@@ -136,6 +154,26 @@ export class StatsService {
   async getStreak(now = new Date()): Promise<Streak> {
     const answersByDay = this.activeDays(await this.studySets.getActivity());
     return { current: this.currentStreak(answersByDay, now), best: this.bestStreak([...answersByDay.keys()]) };
+  }
+
+  // Cada una llega a sabida en el repaso que la sube a la caja knownFromBox: desde su próximo repaso (hoy si va atrasada),
+  // se suman los intervalos de las cajas que le faltan. Una de la caja 1 que toca mañana: mañana y 3 días después.
+  private nextKnown(cards: Flashcard[], now: Date): NextKnown | null {
+    const today = this.startOfDay(now);
+    const wordsByDay = new Map<string, NextKnown>();
+    for (const card of cards) {
+      if (isKnownCard(card) || isNewCard(card)) continue;
+      const nextReview = card.nextReview ? new Date(card.nextReview) : today;
+      let date = this.startOfDay(nextReview < today ? today : nextReview);
+      for (let box = card.box ?? 0; box < knownFromBox - 1; box++) {
+        date = this.addDays(date, reviewIntervalDays[box]);
+      }
+      const key = toDayKey(date);
+      const day = wordsByDay.get(key) ?? { date, words: 0 };
+      day.words++;
+      wordsByDay.set(key, day);
+    }
+    return [...wordsByDay.values()].sort((a, b) => a.date.getTime() - b.date.getTime())[0] ?? null;
   }
 
   // Días con alguna respuesta (deshacerlas puede dejar un día a 0), por su clave.

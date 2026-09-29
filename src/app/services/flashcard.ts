@@ -1,6 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { Subject } from 'rxjs';
-import { Flashcard, boxAfterLapse, isKnownCard, isNewCard, learnedBox, reviewIntervalDays } from './flashcard.model';
+import {
+  Flashcard, boxAfterLapse, isKnownCard, isNewCard, knownStepsPercent, learnedBox, reviewIntervalDays
+} from './flashcard.model';
 import { GeminiService } from './gemini';
 import { CardImageService } from './card-images';
 import { StoredStudySet, StudySetRepository } from './study-set-repository';
@@ -19,13 +21,15 @@ export interface TopicResult {
 export interface TopicProgress {
   // Afianzadas o aprendidas (ver isKnownCard).
   known: number;
-  // Empezadas, aún sin saberlas: el tramo claro de la barra.
+  // Empezadas, aún sin saberlas.
   learning: number;
   // Las que se pueden practicar sin pedir nuevas: las aún sin aprender y las aprendidas a las que les toca repaso.
   pending: number;
   // Las nuevas aún sin empezar (también cuentan en pending).
   newWords: number;
   total: number;
+  // Avance hacia sabérselas todas (0..100, ver knownStepsPercent): se mueve en cada repaso, no solo al saberse una.
+  percent: number;
 }
 
 // Palabras nuevas empezadas hoy y cuántas quedan hasta el tope de Ajustes (ver newWordsLimits).
@@ -412,7 +416,8 @@ export class FlashcardService {
       learning: studySet.cards.filter(card => !isKnownCard(card) && !isNewCard(card)).length,
       pending: studySet.cards.filter(card => !card.learned || this.isDue(card, now)).length,
       newWords: studySet.cards.filter(isNewCard).length,
-      total: studySet.cards.length
+      total: studySet.cards.length,
+      percent: knownStepsPercent(studySet.cards)
     }]));
   }
 

@@ -58,6 +58,31 @@
     <ion-icon slot="end" name="arrow-forward-outline" aria-hidden="true"></ion-icon>
   </ion-button>
 
+  <!-- Lo empezado también es avance, aunque aún no cuente como sabido. -->
+  <section *ngIf="stats?.totalWords" aria-labelledby="progress-title">
+    <h2 class="section-title" id="progress-title">Tu avance</h2>
+    <div class="progress-card">
+      <div class="stage-bar" aria-hidden="true">
+        <ng-container *ngFor="let group of wordGroups">
+          <span class="stage-segment" *ngIf="group.count" [attr.data-group]="group.id"
+            [style.flex-grow]="group.count"></span>
+        </ng-container>
+      </div>
+      <ul class="legend">
+        <li *ngFor="let group of wordGroups">
+          <span class="swatch" [attr.data-group]="group.id" aria-hidden="true"></span>
+          <strong>{{ group.count }}</strong> {{ group.label }}
+        </li>
+      </ul>
+      <p class="milestone" *ngIf="milestone">
+        <ion-icon name="trophy-outline" aria-hidden="true"></ion-icon>
+        {{ milestone }}
+      </p>
+      <p class="progress-note">Una palabra pasa a sabida al acertarla en 3 días distintos: el día que la empiezas, al
+        siguiente y 3 días después.</p>
+    </div>
+  </section>
+
   <section *ngIf="wordOfTheDay" aria-labelledby="word-title">
     <h2 class="section-title" id="word-title">Palabra del día</h2>
     <div class="word-card">

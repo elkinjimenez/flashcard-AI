@@ -56,3 +56,17 @@ export const knownFromBox = 3;
 export function isKnownCard(card: Flashcard): boolean {
   return !!card.learned || (card.box ?? 0) >= knownFromBox;
 }
+
+// Pasos dados hacia saberla (0..knownFromBox): uno por cada día que acertó y la subió de caja. Avanza en cada repaso,
+// no solo al llegar a sabida; fallarla lo hace retroceder.
+export function knownSteps(card: Flashcard): number {
+  return isKnownCard(card) ? knownFromBox : Math.min(card.box ?? 0, knownFromBox);
+}
+
+// Avance de un grupo de palabras (0..100): los pasos dados de todos los necesarios para sabérselas. Con algún paso no se
+// queda en 0, y no llega a 100 hasta sabérselas todas.
+export function knownStepsPercent(cards: Flashcard[]): number {
+  const steps = cards.reduce((sum, card) => sum + knownSteps(card), 0);
+  if (!steps) return 0;
+  return Math.max(1, Math.floor(steps * 100 / (cards.length * knownFromBox)));
+}

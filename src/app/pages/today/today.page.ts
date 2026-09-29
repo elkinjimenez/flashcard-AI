@@ -5,10 +5,12 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { IonButton, IonContent, IonIcon, IonSpinner } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { arrowForwardOutline, checkmarkCircle, flagOutline, flame, shuffleOutline, volumeHighOutline } from 'ionicons/icons';
+import {
+  arrowForwardOutline, checkmarkCircle, flagOutline, flame, shuffleOutline, trophyOutline, volumeHighOutline
+} from 'ionicons/icons';
 import { Flashcard, FlashcardService, MixedReview } from 'src/app/services/flashcard';
 import { DayChangeService } from 'src/app/services/day-change';
-import { Stats, StatsService, TopicStats } from 'src/app/services/stats';
+import { NextKnown, Stats, StatsService, TopicStats } from 'src/app/services/stats';
 import { loadEnglishLevel } from 'src/app/services/english-level';
 import { DailyGoal, loadDailyGoal } from 'src/app/services/daily-goal';
 import { NewWordsLimit, loadNewWordsLimit } from 'src/app/services/new-words-limit';
@@ -18,6 +20,7 @@ import { ToastService } from 'src/app/services/toast';
 import { DailyWord, pickWordOfTheDay } from './word-of-the-day';
 import { PronunciationService } from 'src/app/services/pronunciation';
 import { count } from 'src/app/services/count';
+import { toDayKey } from 'src/app/services/day-key';
 
 // Como mucho, los repasos de una sesión: igual que la sesión más larga que se puede elegir en Temas.
 const maxReviewSession = 20;
@@ -27,9 +30,19 @@ const allTopics = Symbol('allTopics');
 
 // "sábado, 27 de septiembre".
 const dateFormat = new Intl.DateTimeFormat('es', { weekday: 'long', day: 'numeric', month: 'long' });
+// "jueves" y "2 de octubre", para "el jueves 2 de octubre" (sin la coma de dateFormat).
+const weekdayFormat = new Intl.DateTimeFormat('es', { weekday: 'long' });
+const dayMonthFormat = new Intl.DateTimeFormat('es', { day: 'numeric', month: 'long' });
+
+// Las palabras en tres grupos, de más a menos avanzadas: los mismos del desglose de Temas.
+interface WordGroup {
+  id: 'known' | 'learning' | 'new';
+  label: string;
+  count: number;
+}
 
 // Lo de hoy: la racha, la meta diaria, los repasos que tocan (cada tema con su botón para repasarlos, y con varios
-// temas uno para repasarlos todos mezclados) y la palabra del día.
+// temas uno para repasarlos todos mezclados), el avance y la palabra del día.
 @Component({
   selector: 'app-today',
   standalone: true,
@@ -45,8 +58,12 @@ export class TodayPage {
   private pronunciation = inject(PronunciationService);
 
   readonly count = count;
-  // Sale de las palabras que más le cuestan; sin ninguna, no se muestra.
+  // Sale de las palabras que más le cuestan o, si aún no falló ninguna, de las demás (ver dailyWords en Stats).
   wordOfTheDay: DailyWord | null = null;
+  // Se calculan en cada carga: así el *ngFor no vuelve a pintar la leyenda en cada detección de cambios.
+  wordGroups: WordGroup[] = [];
+  // "Sabidas" tarda días en moverse: dice cuándo llega el siguiente salto. Vacío si no está aprendiendo ninguna.
+  milestone = '';
   // Se actualiza en cada carga: la app puede seguir abierta al día siguiente.
   dateLabel = dateFormat.format(new Date());
   stats: Stats | null = null;
@@ -59,7 +76,7 @@ export class TodayPage {
   reviewing: string | typeof allTopics | null = null;
 
   constructor() {
-    addIcons({ arrowForwardOutline, checkmarkCircle, flagOutline, flame, shuffleOutline, volumeHighOutline });
+    addIcons({ arrowForwardOutline, checkmarkCircle, flagOutline, flame, shuffleOutline, trophyOutline, volumeHighOutline });
     registerTopicIcons();
     merge(this.flashcardService.cardsChanged, inject(DayChangeService).dayChanged)
       .pipe(takeUntilDestroyed())
@@ -186,14 +203,38 @@ export class TodayPage {
     }
   }
 
+  // Sabidas: afianzadas o aprendidas (ver isKnownCard).
+  private groupWords(stats: Stats): WordGroup[] {
+    const known = stats.stages.consolidating + stats.stages.learned;
+    return [
+      { id: 'known', label: known === 1 ? 'sabida' : 'sabidas', count: known },
+      { id: 'learning', label: 'aprendiendo', count: stats.stages.learning },
+      { id: 'new', label: 'sin empezar', count: stats.stages.new },
+    ];
+  }
+
+  private describeNextKnown(next: NextKnown | null, now: Date): string {
+    if (!next) return '';
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const day = toDayKey(next.date);
+    const when = day === toDayKey(now) ? 'hoy'
+      : day === toDayKey(tomorrow) ? 'mañana'
+      : `el ${weekdayFormat.format(next.date)} ${dayMonthFormat.format(next.date)}`;
+    return `Si aciertas tus repasos, ${this.count(next.words, 'palabra pasará', 'palabras pasarán')} a sabidas ${when}.`;
+  }
+
   private async load() {
     this.dateLabel = dateFormat.format(new Date());
     this.dailyGoal = loadDailyGoal();
     this.newWordsLimit = loadNewWordsLimit();
     this.loadingError = false;
     try {
-      this.stats = await this.statsService.getStats();
-      this.wordOfTheDay = pickWordOfTheDay(this.stats.hardestWords);
+      const now = new Date();
+      this.stats = await this.statsService.getStats(now);
+      this.wordOfTheDay = pickWordOfTheDay(this.stats.dailyWords);
+      this.wordGroups = this.groupWords(this.stats);
+      this.milestone = this.describeNextKnown(this.stats.nextKnown, now);
     } catch (error) {
       console.error('No se pudieron cargar los repasos de hoy', error);
       this.loadingError = true;

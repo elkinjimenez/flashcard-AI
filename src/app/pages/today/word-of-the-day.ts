@@ -1,7 +1,8 @@
-import { HardWord } from 'src/app/services/stats';
+import type { Flashcard } from 'src/app/services/flashcard.model';
+import { starterTopics } from 'src/app/services/starter-topics';
 import { toDayKey } from 'src/app/services/day-key';
 
-export type DailyWord = Pick<HardWord, 'word' | 'translation'>;
+export type DailyWord = Pick<Flashcard, 'word' | 'translation'>;
 
 interface StoredWord extends DailyWord {
   // Día local (AAAA-MM-DD) en que se eligió.
@@ -10,16 +11,16 @@ interface StoredWord extends DailyWord {
 
 const storageKey = 'flashcards-ai.word-of-the-day';
 
-// Una de las palabras que más le cuestan (ver hardestWords), la misma durante todo el día (hora local) aunque entretanto
-// la aprenda o falle otras. null si aún no falló ninguna.
-export function pickWordOfTheDay(hardWords: DailyWord[], now = new Date()): DailyWord | null {
+// Una de sus palabras (ver dailyWords en Stats), la misma durante todo el día (hora local) aunque entretanto la aprenda o
+// falle otras. Sin ninguna (borró todos los temas), una de las de los temas de inicio: siempre hay palabra del día.
+export function pickWordOfTheDay(words: DailyWord[], now = new Date()): DailyWord {
   const today = toDayKey(now);
   const stored = loadStoredWord();
   if (stored?.date === today) return { word: stored.word, translation: stored.translation };
-  if (!hardWords.length) return null;
 
+  const pool = words.length ? words : ([] as DailyWord[]).concat(...starterTopics.map(topic => topic.words));
   // Sin repetir la del último día mientras haya otras.
-  const candidates = hardWords.length > 1 ? hardWords.filter(({ word }) => word !== stored?.word) : hardWords;
+  const candidates = pool.length > 1 ? pool.filter(({ word }) => word !== stored?.word) : pool;
   // Sin almacenamiento, el número de día hace que siga siendo la misma en cada visita.
   const dayNumber = Math.round(Date.parse(`${today}T12:00:00Z`) / 86_400_000);
   const { word, translation } = candidates[dayNumber % candidates.length];

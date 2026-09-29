@@ -49,7 +49,24 @@ export class KlipyService {
     });
   }
 
-  private async search(term: string, word: string, perPage = this.resultsPerSearch): Promise<ImageCandidate[]> {
+  // Búsquedas de esta sesión, para no repetirlas: el selector de imagen empieza con las mismas que al crear la tarjeta.
+  // Solo se quedan las que encontraron algo: una vacía o fallida (sin conexión) se puede reintentar.
+  private searchCache = new Map<string, Promise<ImageCandidate[]>>();
+
+  private search(term: string, word: string, perPage = this.resultsPerSearch): Promise<ImageCandidate[]> {
+    const key = `${perPage}:${term}`;
+    let request = this.searchCache.get(key);
+    if (!request) {
+      request = this.fetchCandidates(term, word, perPage);
+      this.searchCache.set(key, request);
+      request.then(candidates => {
+        if (!candidates.length) this.searchCache.delete(key);
+      });
+    }
+    return request;
+  }
+
+  private async fetchCandidates(term: string, word: string, perPage: number): Promise<ImageCandidate[]> {
     const params = new HttpParams()
       .set('per_page', perPage)
       .set('content_filter', 'medium')

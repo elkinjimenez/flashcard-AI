@@ -1,11 +1,11 @@
 ion-content {
   --background: var(--app-bg);
 
-  // Al final, hueco para la sección fija de abajo, que ya incluye el de la barra de pestañas.
+  // Al final, hueco para la sección fija de abajo, que ya incluye el de la barra de pestañas (y el desglose del tema).
   &::part(scroll) {
     display: flex;
     flex-direction: column;
-    padding-bottom: calc(190px + var(--tab-bar-space));
+    padding-bottom: calc(214px + var(--tab-bar-space));
   }
 }
 
@@ -118,9 +118,9 @@ ion-content {
     font-size: 0.7rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
-  // Las que sabe y, en un azul más claro, las que está aprendiendo.
   .topic-progress-bar {
     display: flex;
     flex: 1;
@@ -132,10 +132,7 @@ ion-content {
     span {
       height: 100%;
       background: var(--ion-color-primary);
-    }
-
-    .learning {
-      background: var(--app-blue-300);
+      transition: width 0.4s ease;
     }
   }
 
@@ -169,16 +166,11 @@ ion-content {
       color: rgba(var(--ion-color-primary-contrast-rgb), 0.85);
     }
 
-    // Tres tonos bien separados: sobre el azul, el tramo de las que está aprendiendo apenas se distinguía del fondo.
     .topic-progress-bar {
-      background: rgba(var(--ion-color-primary-contrast-rgb), 0.2);
+      background: rgba(var(--ion-color-primary-contrast-rgb), 0.25);
 
       span {
         background: var(--ion-color-primary-contrast);
-      }
-
-      .learning {
-        background: rgba(var(--ion-color-primary-contrast-rgb), 0.6);
       }
     }
   }
@@ -198,6 +190,19 @@ ion-content {
   box-shadow: 0 -12px 30px rgba(var(--app-ink-rgb), 0.08);
   backdrop-filter: blur(18px) saturate(160%);
   -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+// Encima de todo el panel: describe el tema elegido.
+.topic-breakdown {
+  margin: 0 4px 12px;
+  color: var(--app-text-muted);
+  font-size: 0.8rem;
+
+  strong {
+    color: var(--app-text);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 // Título y cantidad en una fila: el panel ocupa menos y deja más sitio a los temas.

@@ -146,15 +146,10 @@ export class StudySetupPage implements OnInit {
     return englishLevelLabel(this.level);
   }
 
-  // Parte del tema que son `count` palabras, para su barra: las que sabe y, en claro, las que está aprendiendo.
-  progressPercent(progress: TopicProgress, count: number): number {
-    return progress.total ? count * 100 / progress.total : 0;
-  }
-
   topicAriaLabel(topic: Topic): string {
     const parts = [topic.label];
     if (topic.progress) {
-      parts.push(`ya sabes ${topic.progress.known} de ${topic.progress.total} palabras`);
+      parts.push(`avance ${topic.progress.percent} %`, `ya sabes ${topic.progress.known} de ${topic.progress.total} palabras`);
     }
     parts.push(topic.fromLocal ? 'tema guardado' : 'tema nuevo de la IA');
     return parts.join(', ');

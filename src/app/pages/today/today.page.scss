@@ -176,6 +176,95 @@ ion-content {
   font-weight: 800;
 }
 
+.progress-card {
+  padding: 18px 20px;
+  border: 1px solid var(--app-border-subtle);
+  border-radius: 18px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow-card);
+}
+
+// Con los colores de las etapas de Progreso: las sabidas con el de las afianzadas.
+.stage-bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.stage-segment {
+  flex-basis: 0;
+  min-width: 4px;
+}
+
+[data-group='known'] {
+  background: var(--app-stage-consolidating);
+}
+
+[data-group='learning'] {
+  background: var(--app-stage-learning);
+}
+
+[data-group='new'] {
+  background: var(--app-stage-new);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 12px 0 0;
+  padding: 0;
+  color: var(--app-text-muted);
+  font-size: 0.82rem;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  strong {
+    color: var(--app-text);
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.swatch {
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.milestone {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--app-divider);
+  color: var(--app-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+
+  ion-icon {
+    flex-shrink: 0;
+    margin-top: 1px;
+    color: var(--ion-color-primary);
+    font-size: 1.1rem;
+  }
+}
+
+.progress-note {
+  margin: 10px 0 0;
+  color: var(--app-text-muted);
+  font-size: 0.78rem;
+}
+
 // Texto a la izquierda y botón de escuchar a la derecha, para ocupar todo el ancho.
 .word-card {
   display: flex;
